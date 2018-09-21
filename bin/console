@@ -1,0 +1,23 @@
+#!/usr/bin/env php
+<?php
+// application.php
+
+error_reporting(E_ALL^E_NOTICE);
+// set_time_limit(0);
+require dirname(dirname(__FILE__)) . '/vendor/autoload.php';
+
+// 数据库连接
+$db = getConsoleDatabaseConfig();
+\RedBeanPHP\R::setup($db['driver'] . ':host=' . $db['host'] . ';dbname=' . $db['database'], $db['username'], $db['password']);
+
+// 注册脚本
+$application = new Symfony\Component\Console\Application();
+$application->add(new App\Command\OrderProgressCommand());			// 更新订单进度
+$application->add(new App\Command\VipPresentScoresCommand());		// 充值vip每月赠送积分
+$application->add(new App\Command\ScoreLogsRsyncCommand());			// 同步积分变动记录
+// $application->add(new App\Command\AddMissedScoresCommand());		// 补上漏掉的积分
+$application->add(new App\Command\OrderCreateCommand());			// 异步队列下单
+$application->add(new App\Command\OrderCompleteCommand());			// 标记订单已完成
+//$application->add(new App\Command\orderDaemonCommand());			// daemon
+
+$application->run();

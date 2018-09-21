@@ -1,0 +1,126 @@
+body,div,ul,li,p,h1,h2,h3,h4,span,a,img,form {           /*所以标签，外边距内边距为0*/
+	margin: 0;
+	padding: 0;
+}
+ul {                              /*ul中取消样式*/
+	list-style: none;
+}
+body {                             /*body中字体格式*/
+	font-family: "微软雅黑";
+}
+img {                               /*图片中去边框*/
+	border: none;
+}
+a {                                 /*a标签中去下划线*/
+	text-decoration: none;
+}
+/*********cssR*********/
+.bodyer{
+	box-sizing:border-box;
+	width: 100%;
+	height: 40rem;
+	background-image: url(../img/bg.png);
+	background-repeat:no-repeat;
+	position: relative;
+	overflow: hidden;
+	background-size:100%;
+}
+img{
+	display: block;
+	margin: 0 auto;
+}
+.bodyer > img:nth-child(1){
+	width: 90%;
+	margin-top: 0.4rem;
+}
+.bodyer > img:nth-child(2){
+	width: 55%;
+	margin-top: 0.55rem;
+}
+.bodyer > img:nth-child(3){
+	width: 70%;
+	margin-top: 0.8rem;
+}
+.bodyer > img:nth-child(4){
+	width: 90%;
+	margin-top: 0.95rem;
+}
+.bodyer > img:nth-child(5){
+	width: 90%;
+	margin-top: 1rem;
+}
+.bodyer > img:nth-child(6){
+	width: 70%;
+	margin-top: 2rem;
+}
+section{
+	box-sizing:border-box;
+	width: 90%;
+	height: 10rem;
+	margin: 0 auto;
+	margin-top: 0.5rem;
+	background-color: #fff;
+	position: relative;
+	overflow: hidden;
+	border-radius: 0.3rem;
+}
+.down{
+	position:fixed;
+	bottom: 0;
+	left: 0;
+	padding: 0;
+}
+section .star{
+	display: inline-block;
+	width: 20%;
+	padding: 0;
+	float: left;
+	margin-top: 0.4rem;
+	margin-left: 0.2rem;
+}
+#slide{
+	box-sizing:border-box;
+	display: block;
+	width: 100%;
+	height: 10rem;
+	overflow: hidden;
+	padding-left: 0.3rem;
+	padding-right: 0.3rem;
+}
+section ul li{
+	box-sizing:border-box;
+	width: 100%;
+	height: 2.5rem;
+	border-bottom: 3px dashed #e0daff;
+}
+section ul li p{
+	box-sizing:border-box;
+	color: #666;
+	font-size: 0.3rem;
+	float: left;
+	letter-spacing:4px ;
+	line-height: 0.5rem;
+	margin-top: 0.2rem;
+}
+section ul li span{
+	font-size: 0.35rem;
+	color: #000;
+	float: left;
+	letter-spacing:4px ;
+	margin-top: 0.3rem;
+}
+.down{
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 1.3rem;
+	background-image: url(../img/button3.png);
+	background-repeat:no-repeat;
+	background-size: 100%;
+	text-align: center;
+	line-height: 1.3rem;
+	font-size: 0.45rem;
+	color: #fff;
+	z-index: 999;
+}

@@ -1,0 +1,26 @@
+{
+    "require": {
+		    "noahbuscher/macaw": "dev-master",
+        "php-curl-class/php-curl-class": "^7.1",
+        "monolog/monolog": "1.x",
+        "ircmaxell/password-compat": "^1.0",
+        "gabordemooij/redbean": "^4.3",
+        "kartik-v/bootstrap-fileinput": "@dev",
+        "symfony/console": "^3.2",
+        "overtrue/wechat": "~3.3"
+    },
+    "autoload": {
+      "files": [
+            "lib/functions.php"
+      ],
+  	  "classmap": [
+  	    "app/Controller",
+  	    "app/Model",
+        "app/Middleware",
+        "app/Command",
+        "admin/Controller",
+        "admin/Model",
+        "admin/Middleware"
+  	  ]
+  	}
+}

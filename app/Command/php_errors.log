@@ -1,0 +1,15 @@
+[09-Aug-2018 13:00:18 Asia/Shanghai] PHP Fatal error:  Class 'App\Command\orderDaemonCommand' not found in /www/cheats/bin/console on line 21
+[09-Aug-2018 13:00:18 Asia/Shanghai] PHP Stack trace:
+[09-Aug-2018 13:00:18 Asia/Shanghai] PHP   1. {main}() /www/cheats/bin/console:0
+[09-Aug-2018 13:01:02 Asia/Shanghai] PHP Fatal error:  Class 'App\Command\orderDaemonCommand' not found in /www/cheats/bin/console on line 21
+[09-Aug-2018 13:01:02 Asia/Shanghai] PHP Stack trace:
+[09-Aug-2018 13:01:02 Asia/Shanghai] PHP   1. {main}() /www/cheats/bin/console:0
+[09-Aug-2018 13:25:32 Asia/Shanghai] PHP Fatal error:  Class 'App\Command\orderDaemonCommand' not found in /www/cheats/bin/console on line 21
+[09-Aug-2018 13:25:32 Asia/Shanghai] PHP Stack trace:
+[09-Aug-2018 13:25:32 Asia/Shanghai] PHP   1. {main}() /www/cheats/bin/console:0
+[09-Aug-2018 13:26:40 Asia/Shanghai] PHP Fatal error:  Class 'App\Command\orderDaemonCommand' not found in /www/cheats/bin/console on line 21
+[09-Aug-2018 13:26:40 Asia/Shanghai] PHP Stack trace:
+[09-Aug-2018 13:26:40 Asia/Shanghai] PHP   1. {main}() /www/cheats/bin/console:0
+[09-Aug-2018 13:28:25 Asia/Shanghai] PHP Fatal error:  Class 'App\Command\orderDaemonCommand' not found in /www/cheats/bin/console on line 21
+[09-Aug-2018 13:28:25 Asia/Shanghai] PHP Stack trace:
+[09-Aug-2018 13:28:25 Asia/Shanghai] PHP   1. {main}() /www/cheats/bin/console:0

@@ -1,0 +1,9 @@
+body {
+    position: relative;
+    font-family: 'Lato', "PingFang SC", "Microsoft YaHei", sans-serif;
+    padding-top: 70px;
+    font-size: 14px;
+    line-height: 2;
+    color: #555;
+    background: #fff;
+}
