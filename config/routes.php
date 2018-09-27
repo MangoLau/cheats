@@ -23,6 +23,7 @@ Macaw::get('/qqProductList', 'App\Controller\ProductController@qqList');				// Q
 Macaw::post('/recharge', 'App\Controller\RechargeController@create');					// 充值
 Macaw::post('/recharge/direct', 'App\Controller\RechargeController@direct');			// 微信充值
 Macaw::post('/recharge/wechat', 'App\Controller\RechargeController@wechat');			// 微信支付
+Macaw::post('/recharge/xianfu', 'App\Controller\RechargeController@xianfu');			// 先付支付
 Macaw::post('/recharge/update', 'App\Controller\RechargeController@update');			// 充值更新
 Macaw::post('/recharge/callback', 'App\Controller\RechargeController@callback');		// 充值支付回调
 Macaw::post('/recharge/71_callback', 'App\Controller\RechargeController@callback_71pay');// 充值支付回调
@@ -32,6 +33,7 @@ Macaw::get('/recharge/you_callback3', 'App\Controller\RechargeController@callbac
 Macaw::get('/recharge/wm_callback', 'App\Controller\RechargeController@callback_wm');	// 完美支付回调
 Macaw::post('/recharge/qj_callback', 'App\Controller\RechargeController@callback_qj');	// 钱进支付回调
 Macaw::post('/recharge/wx_callback', 'App\Controller\RechargeController@callback_wx');	// 微信支付回调
+Macaw::get('/recharge/xf_callback', 'App\Controller\RechargeController@callback_xf');	// 微信支付回调
 Macaw::get('/recharges', 'App\Controller\RechargeController@index');					// 充值列表
 Macaw::get('/recharge/first', 'App\Controller\RechargeController@first');				// 首充大礼拜
 Macaw::post('/recharge/first', 'App\Controller\RechargeController@first');				// 首充
