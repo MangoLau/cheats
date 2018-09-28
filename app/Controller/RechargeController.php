@@ -8,9 +8,11 @@ use App\Model\User;
 use App\Model\Attendance;
 use App\Model\Config;
 use App\Model\ScoreLog;
+use EasyWeChat\Core\Exception;
 use EasyWeChat\Foundation\Application;
 use function EasyWeChat\Payment\get_client_ip;
 use EasyWeChat\Payment\Order;
+use \Curl\Curl;
 
 class RechargeController extends BaseController
 {
@@ -197,8 +199,9 @@ class RechargeController extends BaseController
     {
         $product_id = $_POST['product_id'];
         $money = $_POST['money'];
+        $paytype = $_POST['paytype'];
 
-        if (empty($product_id) || empty($money)) {
+        if (empty($product_id) || empty($money) || empty($paytype)) {
             $this->error('rechare create failed: params wrong', [ $_POST ]);
             $this->return_error(400, '参数不完整');
         } else {
@@ -237,6 +240,32 @@ class RechargeController extends BaseController
                     $recharge->platform = strtolower($this->platform) == 'android' ? self::PLATFORM_ANDROID : self::PLATFORM_IOS;
 
                     if (Recharge::store($recharge)) {
+                        $payOpt = [
+                            'appid' => self::XF_APPID,
+                            'orderid' => $recharge->id,
+                            'fee' => $real_money,
+                            'tongbu_url' => self::XF_CALLBACK,
+                            'clientip' => get_client_ip(),
+                            'back_url' => 'http://www.dianzanyun.com',
+                            'sign' => md5(self::XF_APPID . $recharge->id . $real_money . self::XF_CALLBACK . self::XF_APPKEY),
+                            'sfrom' => 'wap',
+                            'paytype' => $paytype,
+                        ];
+                        $curl = new Curl();
+                        $curl->get($payurl);
+                        if ($curl->error) {
+                            $this->error('xianfu curl failed', $payOpt);
+                            $this->return_error();
+                        } else {
+                            $r = $curl->response;
+                            try {
+                                $r = json_decode($r, true);
+                            } catch (Exception $e) {
+                                $this->error('curl return error', (array)$recharge);
+                                $this->return_error();
+                            }
+                        }
+
                         $ret = [
                             'id' => $recharge->id,
                             'product_id' => $recharge->pid,
@@ -247,17 +276,6 @@ class RechargeController extends BaseController
                             'created_at' => $recharge->created_at ?: getCurrentTime(),
                             'vip_deadline' => $user->vip_deadline ?: '0',
                             'scores' => $user->remaining_scores ?: '0',
-                            'pay' => [
-                                'appid' => self::XF_APPID,
-                                'order' => $recharge->id,
-                                'fee' => $real_money,
-                                'tongbu_url' => self::XF_CALLBACK,
-                                'clientip' => get_client_ip(),
-                                'back_url' => 'http://www.dianzanyun.com',
-                                'sign' => md5(self::XF_APPID . $recharge->id . $real_money . self::XF_CALLBACK . self::XF_APPKEY),
-                                'sfrom' => 'app',
-                                'payurl' => $payurl,
-                            ],
                         ];
                         $this->return_success($ret);
                     } else {
@@ -330,7 +348,7 @@ class RechargeController extends BaseController
 	}
 
 	/**
-	 * 充值
+	 * 微信充值
 	 */
 	public function wechat()
 	{
