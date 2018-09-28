@@ -101,8 +101,8 @@ class RechargeController extends BaseController
 	const QJ_ALI_H5_PAY = 'aliwap';			// 支付宝h5支付
 
     //先付
-    const XF_APPID = 1;
-    const XF_APPKEY = '';
+    const XF_APPID = 10227;
+    const XF_APPKEY = '86c393c06e0ec9a47d56789cfa237279';
     const XF_CALLBACK = 'http://106.75.77.8/recharge/xf_callback';
 
 	/**
@@ -1199,7 +1199,7 @@ class RechargeController extends BaseController
 
 
     /**
-     * 微信支付回调
+     * 先付支付回调
      */
     public function callback_xf()
     {
@@ -1288,7 +1288,7 @@ class RechargeController extends BaseController
 
                     Recharge::commit();
 
-                    echo 'success';
+                    echo 'OK';
                 } catch (Exception $e) {
                     $this->error('recharge callback failed rollbak', [$e->getMessage()]);
                     Recharge::rollback();

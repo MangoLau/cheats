@@ -686,3 +686,46 @@
        "result": null,
    }
 ```
+
+## 优支付充值
+* 地址: **/recharge/xianfu**
+* Method: **POST**
+* 参数:
+    * `product_id` *string* 商品编号
+    * `money` *string* 实际支付金额, 单位分
+* 返回值:
+
+```json
+   {
+       "error_code": 0,
+       "error": "",
+       "result" : 
+       {
+           "id": xxx, // 充值ID
+           "product_id": xxx, // 商品编号
+           "content": xxx,	// 描述，如：1000积分/3个月VIP
+           "status": xxx,	// 0:未付款，1:已付款，2:已完成，3:失败
+           "created_at": 1456382625,
+           "vip_deadline": xxx,  // VIP到期的时间戳
+           "scores": xxx,        // 剩余总积分
+           "pay": {
+                "appid": 111,//appid
+                "order": xxx,
+                "fee": xxx,//金额
+                "tongbu_url":xxx,//接收交易结果的通知地址
+                "clientip":xxx,//用户IP
+                "back_url":xxx,//支付返回页
+                "sign":xxx,//签名
+                "sfrom":'app'//客户端模式
+           }
+       }
+   }
+```
+
+```json
+   {
+       "error_code": 100,
+       "error": "创建失败原因",
+       "result": null,
+   }
+```
