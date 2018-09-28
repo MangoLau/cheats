@@ -70,6 +70,12 @@ class Config extends Base
 		return self::getConfig('wechat_discount');
 	}
 
+    //优支付/掌付/先付的动态服务器地址
+	public static function getXfPayUrl()
+    {
+        return self::getConfig('xfPayUrl');
+    }
+
 	// 钱进支付的支付方式
 	// public static function getQjPayType()
 	// {

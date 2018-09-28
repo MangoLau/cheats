@@ -219,6 +219,12 @@ class RechargeController extends BaseController
                         $this->return_error(401, '充值金额不合法');
                         exit;
                     }
+                    $payurl = Config::getXfPayUrl();
+                    if (empty($payurl)) {
+                        $this->error('xfPayUrl config is empty', [ $user, $is_vip, $discount, $real_money, $_POST ]);
+                        $this->return_error(401, '充值金额不合法');
+                        exit;
+                    }
 
                     $recharge = Recharge::dispense('recharges');
                     $recharge->uid = $user->id;
@@ -250,6 +256,7 @@ class RechargeController extends BaseController
                                 'back_url' => 'http://www.dianzanyun.com',
                                 'sign' => md5(self::XF_APPID . $recharge->id . $real_money . self::XF_CALLBACK . self::XF_APPKEY),
                                 'sfrom' => 'app',
+                                'payurl' => $payurl,
                             ],
                         ];
                         $this->return_success($ret);

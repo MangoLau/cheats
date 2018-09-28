@@ -716,7 +716,8 @@
                 "clientip":xxx,//用户IP
                 "back_url":xxx,//支付返回页
                 "sign":xxx,//签名
-                "sfrom":'app'//客户端模式
+                "sfrom":'app',//客户端模式
+                'payurl':xxx//后台配置的xfPayUrl支付地址
            }
        }
    }
