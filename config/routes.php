@@ -34,6 +34,7 @@ Macaw::get('/recharge/wm_callback', 'App\Controller\RechargeController@callback_
 Macaw::post('/recharge/qj_callback', 'App\Controller\RechargeController@callback_qj');	// 钱进支付回调
 Macaw::post('/recharge/wx_callback', 'App\Controller\RechargeController@callback_wx');	// 微信支付回调
 Macaw::get('/recharge/xf_callback', 'App\Controller\RechargeController@callback_xf');	// 微信支付回调
+Macaw::get('/recharge/xianfutest', 'App\Controller\RechargeController@xianfutest');	// test
 Macaw::get('/recharges', 'App\Controller\RechargeController@index');					// 充值列表
 Macaw::get('/recharge/first', 'App\Controller\RechargeController@first');				// 首充大礼拜
 Macaw::post('/recharge/first', 'App\Controller\RechargeController@first');				// 首充

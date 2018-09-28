@@ -43,7 +43,7 @@ class BaseController
 	{
 		$path = getCurrentRequestPath();
 		// 免登录接口
-		if (in_array($path, ['/', '/test', '/login', '/refreshToken', '/recharge/callback', '/recharge/71_callback', '/recharge/you_callback', '/recharge/you_callback2', '/recharge/you_callback3', '/recharge/wm_callback', '/recharge/wx_callback', '/recharge/qj_callback', '/hot-people', '/qqProducts', '/v2/qqProducts', '/banners', '/broadcasts', '/laquanquan', '/shareRanks', '/config', '/user_exists', '/recharge/direct'])) {
+		if (in_array($path, ['/', '/test', '/login', '/refreshToken', '/recharge/callback', '/recharge/71_callback', '/recharge/you_callback', '/recharge/you_callback2', '/recharge/you_callback3', '/recharge/wm_callback', '/recharge/wx_callback', '/recharge/xf_callback', '/recharge/xianfutest', '/recharge/qj_callback', '/hot-people', '/qqProducts', '/v2/qqProducts', '/banners', '/broadcasts', '/laquanquan', '/shareRanks', '/config', '/user_exists', '/recharge/direct'])) {
 			return;
 		}
 

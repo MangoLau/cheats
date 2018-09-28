@@ -225,7 +225,7 @@ class RechargeController extends BaseController
                     $payurl = Config::getXfPayUrl();
                     if (empty($payurl)) {
                         $this->error('xfPayUrl config is empty', [ $user, $is_vip, $discount, $real_money, $_POST ]);
-                        $this->return_error(401, '充值金额不合法');
+                        $this->return_error(401, '充值配置有误');
                         exit;
                     }
 
@@ -252,37 +252,92 @@ class RechargeController extends BaseController
                             'paytype' => $paytype,
                         ];
                         $curl = new Curl();
-                        $curl->get($payurl);
+                        $curl->get($payurl, $payOpt);
                         if ($curl->error) {
                             $this->error('xianfu curl failed', $payOpt);
-                            $this->return_error();
+                            $this->return_error(402, '支付请求错误');
                         } else {
                             $r = $curl->response;
                             try {
                                 $r = json_decode($r, true);
+                                $returncode = isset($r['code']) ? $r['code'] : null;
+                                if ($returncode != 'success') {
+                                    $this->error('curl return error', [(array)$recharge, (array)$r]);
+                                    $this->return_error(403, '支付返回错误');
+                                }
+                                $pay = isset($r['msg']) ? $r['msg'] : '';
+                                $ret = [
+                                    'id' => $recharge->id,
+                                    'product_id' => $recharge->pid,
+                                    'content' => $recharge->type == self::TYPE_SCORE ? $recharge->amount . '积分' : ($recharge->type == self::TYPE_VIP ? $recharge->amount . '个月VIP' : ''),
+                                    'type' => $recharge->type,
+                                    'amount' => $recharge->amount,
+                                    'status' => $recharge->status,
+                                    'created_at' => $recharge->created_at ?: getCurrentTime(),
+                                    'vip_deadline' => $user->vip_deadline ?: '0',
+                                    'scores' => $user->remaining_scores ?: '0',
+                                    'pay' => $pay,
+                                ];
+                                $this->return_success($ret);
                             } catch (Exception $e) {
                                 $this->error('curl return error', (array)$recharge);
                                 $this->return_error();
                             }
                         }
-
-                        $ret = [
-                            'id' => $recharge->id,
-                            'product_id' => $recharge->pid,
-                            'content' => $recharge->type == self::TYPE_SCORE ? $recharge->amount . '积分' : ($recharge->type == self::TYPE_VIP ? $recharge->amount . '个月VIP' : ''),
-                            'type' => $recharge->type,
-                            'amount' => $recharge->amount,
-                            'status' => $recharge->status,
-                            'created_at' => $recharge->created_at ?: getCurrentTime(),
-                            'vip_deadline' => $user->vip_deadline ?: '0',
-                            'scores' => $user->remaining_scores ?: '0',
-                        ];
-                        $this->return_success($ret);
                     } else {
                         $this->error('recharge failed', (array)$recharge);
                         $this->return_error();
                     }
                 }
+            }
+        }
+    }
+
+    public function xianfutest()
+    {
+        $real_money = 100;
+        $paytype = 21;
+        $payurl = Config::getXfPayUrl();
+        if (empty($payurl)) {
+            $this->error('xfPayUrl config is empty');
+            $this->return_error();
+            exit;
+        }
+        $payOpt = [
+            'appid' => self::XF_APPID,
+            'orderid' => 1,
+            'fee' => $real_money,
+            'tongbu_url' => self::XF_CALLBACK,
+            'clientip' => get_client_ip(),
+            'back_url' => 'http://www.dianzanyun.com',
+            'sign' => md5(self::XF_APPID . 1 . $real_money . self::XF_CALLBACK . self::XF_APPKEY),
+            'sfrom' => 'wap',
+            'paytype' => $paytype,
+        ];
+        $curl = new Curl();
+        $curl->get($payurl, $payOpt);
+        if ($curl->error) {
+            $this->error('xianfu curl failed', $payOpt);
+            $this->return_error(402, '支付请求错误');
+        } else {
+            $r = $curl->response;
+            try {
+                $r = json_decode($r, true);
+                $returncode = isset($r['code']) ? $r['code'] : null;
+                if ($returncode != 'success') {
+                    $this->error('curl return error', [(array)$payOpt, (array)$r]);
+                    $this->return_error(403, '支付返回错误');
+                }
+                $ret = [
+                    'payOpt' => $payOpt,
+                    'pay' => [
+                        'payurl' => isset($r['msg']) ? $r['msg'] : '',
+                    ],
+                ];
+                $this->return_success($ret);
+            } catch (Exception $e) {
+                $this->error('curl return error', (array)$payOpt);
+                $this->return_error();
             }
         }
     }

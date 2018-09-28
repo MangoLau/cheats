@@ -709,15 +709,7 @@
            "vip_deadline": xxx,  // VIP到期的时间戳
            "scores": xxx,        // 剩余总积分
            "pay": {
-                "appid": 111,//appid
-                "order": xxx,
-                "fee": xxx,//金额
-                "tongbu_url":xxx,//接收交易结果的通知地址
-                "clientip":xxx,//用户IP
-                "back_url":xxx,//支付返回页
-                "sign":xxx,//签名
-                "sfrom":'app',//客户端模式
-                'payurl':xxx//后台配置的xfPayUrl支付地址
+                'payurl':xxx//生成的支付链接或者二维码图片或者跳转的页面
            }
        }
    }
