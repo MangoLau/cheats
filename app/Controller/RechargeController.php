@@ -108,7 +108,7 @@ class RechargeController extends BaseController
     const XF_CALLBACK = 'http://106.75.77.8/recharge/xf_callback';
 
 	/**
-	 * 充值
+	 * 充值--废弃
 	 */
 	public function create()
 	{
@@ -201,102 +201,134 @@ class RechargeController extends BaseController
         $money = $_POST['money'];
         $paytype = $_POST['paytype'];
 
-        if (empty($product_id) || empty($money) || empty($paytype)) {
+        if (!isset($_POST['product_id']) || empty($money) || empty($paytype)) {
             $this->error('rechare create failed: params wrong', [ $_POST ]);
             $this->return_error(400, '参数不完整');
-        } else {
-            $product = Product::findOne('products', ' id = ? AND status = ? ', [  $_POST['product_id'], self::PRODUCT_STATUS_ONLINE ]);
+            return false;
+        }
+        $user = User::findOne('users', ' id = ? ', [ $this->token->uid ]);
+        if (empty($user)) {
+            $this->return_error();
+            return false;
+        }
+        if ($product_id == 0) {// 首充
+            $first_recharge_params = Config::getFirstRechargeParams();
+            if (empty($first_recharge_params)) {
+                $this->return_error(404, '无首充大礼包');
+                return false;
+            }
+            if (!empty(Recharge::count('recharges', ' uid = ? AND status = ? ', [ $user->id, self::PAY_STATUS_YES ]))) {
+                $this->return_error(403, '已经充值过，没有首充资格');
+                return false;
+            }
+            $first_recharge_params = json_decode($first_recharge_params);
+            $real_money = $first_recharge_params->money;
+
+            $recharge = Recharge::dispense('recharges');
+            $recharge->uid = $user->id;
+            $recharge->money = $first_recharge_params->money;
+            $recharge->type = self::TYPE_SCORE;
+            $recharge->amount = $first_recharge_params->scores + $first_recharge_params->attach;
+            $recharge->attach = $first_recharge_params->vip;
+            $recharge->status = self::PAY_STATUS_NO;
+            $recharge->platform = strtolower($this->platform) == 'android' ? self::PLATFORM_ANDROID : self::PLATFORM_IOS;
+        } else {// 非首充
+            $product = Product::findOne('products', ' id = ? AND status = ? ', [  $product_id, self::PRODUCT_STATUS_ONLINE ]);
             if (empty($product)) {
                 $this->return_error(400, '充值产品不存在');
+                return false;
+            }
+            // 验证充值金额是否合法
+            $is_vip = $user->vip_deadline >= getCurrentTime();
+            $discount = $is_vip ? Config::getVipRechargeDiscount() : 100;
+            $real_money = ceil($product->money * $discount / 100);
+            if ($real_money != $money) {
+                $this->error('recharge money not valid', [ $user, $is_vip, $discount, $real_money, $_POST ]);
+                $this->return_error(401, '充值金额不合法');
+                exit;
+            }
+
+            $recharge = Recharge::dispense('recharges');
+            $recharge->uid = $user->id;
+            $recharge->pid = $product->id;
+            $recharge->money = $real_money;
+            $recharge->type = $product->type;
+            $recharge->amount = $product->amount;
+            $recharge->attach = $product->attach;
+            $recharge->status = self::PAY_STATUS_NO;
+            $recharge->platform = strtolower($this->platform) == 'android' ? self::PLATFORM_ANDROID : self::PLATFORM_IOS;
+        }
+
+        $payurl = Config::getXfPayUrl();
+        if (empty($payurl)) {
+            $this->error('xfPayUrl config is empty', [ $user, $real_money, $_POST ]);
+            $this->return_error(401, '充值配置有误');
+            return false;
+        }
+
+        if (Recharge::store($recharge)) {
+            $payOpt = [
+                'appid' => self::XF_APPID,
+                'orderid' => $recharge->id,
+                'fee' => $real_money,
+                'tongbu_url' => self::XF_CALLBACK,
+                'clientip' => get_client_ip(),
+                'back_url' => 'http://www.dianzanyun.com',
+                'sign' => md5(self::XF_APPID . $recharge->id . $real_money . self::XF_CALLBACK . self::XF_APPKEY),
+                'sfrom' => 'wap',
+                'paytype' => $paytype,
+            ];
+            $curl = new Curl();
+            $curl->get($payurl, $payOpt);
+            if ($curl->error) {
+                $this->error('xianfu curl failed', $payOpt);
+                $this->return_error(402, '支付请求错误');
+                return false;
             } else {
-                $user = User::findOne('users', ' id = ? ', [ $this->token->uid ]);
-                if (empty($user)) {
-                    $this->return_error();
-                } else {
-                    // 验证充值金额是否合法
-                    $is_vip = $user->vip_deadline >= getCurrentTime();
-                    $discount = $is_vip ? Config::getVipRechargeDiscount() : 100;
-                    $real_money = ceil($product->money * $discount / 100);
-                    if ($real_money != $money) {
-                        $this->error('recharge money not valid', [ $user, $is_vip, $discount, $real_money, $_POST ]);
-                        $this->return_error(401, '充值金额不合法');
-                        exit;
+                $r = $curl->response;
+                try {
+                    $r = json_decode($r, true);
+                    $this->error('curl debug:', [$r, $payOpt]);
+                    $returncode = isset($r['code']) ? $r['code'] : null;
+                    if ($returncode != 'success') {
+                        $this->error('curl return error', [(array)$recharge, (array)$r]);
+                        $this->return_error(403, '支付返回错误');
+                        return false;
                     }
-                    $payurl = Config::getXfPayUrl();
-                    if (empty($payurl)) {
-                        $this->error('xfPayUrl config is empty', [ $user, $is_vip, $discount, $real_money, $_POST ]);
-                        $this->return_error(401, '充值配置有误');
-                        exit;
-                    }
-
-                    $recharge = Recharge::dispense('recharges');
-                    $recharge->uid = $user->id;
-                    $recharge->pid = $product->id;
-                    $recharge->money = $real_money;
-                    $recharge->type = $product->type;
-                    $recharge->amount = $product->amount;
-                    $recharge->attach = $product->attach;
-                    $recharge->status = self::PAY_STATUS_NO;
-                    $recharge->platform = strtolower($this->platform) == 'android' ? self::PLATFORM_ANDROID : self::PLATFORM_IOS;
-
-                    if (Recharge::store($recharge)) {
-                        $payOpt = [
-                            'appid' => self::XF_APPID,
-                            'orderid' => $recharge->id,
-                            'fee' => $real_money,
-                            'tongbu_url' => self::XF_CALLBACK,
-                            'clientip' => get_client_ip(),
-                            'back_url' => 'http://www.dianzanyun.com',
-                            'sign' => md5(self::XF_APPID . $recharge->id . $real_money . self::XF_CALLBACK . self::XF_APPKEY),
-                            'sfrom' => 'wap',
+                    $ret = [
+                        'id' => $recharge->id,
+                        'product_id' => $recharge->pid,
+                        'content' => $recharge->type == self::TYPE_SCORE ? $recharge->amount . '积分' : ($recharge->type == self::TYPE_VIP ? $recharge->amount . '个月VIP' : ''),
+                        'type' => $recharge->type,
+                        'amount' => $recharge->amount,
+                        'status' => $recharge->status,
+                        'created_at' => $recharge->created_at ?: getCurrentTime(),
+                        'vip_deadline' => $user->vip_deadline ?: '0',
+                        'scores' => $user->remaining_scores ?: '0',
+                        'pay' => [
+                            'payurl' => isset($r['msg']) ? $r['msg'] : '',
                             'paytype' => $paytype,
-                        ];
-                        $curl = new Curl();
-                        $curl->get($payurl, $payOpt);
-                        if ($curl->error) {
-                            $this->error('xianfu curl failed', $payOpt);
-                            $this->return_error(402, '支付请求错误');
-                        } else {
-                            $r = $curl->response;
-                            try {
-                                $r = json_decode($r, true);
-                                $returncode = isset($r['code']) ? $r['code'] : null;
-                                if ($returncode != 'success') {
-                                    $this->error('curl return error', [(array)$recharge, (array)$r]);
-                                    $this->return_error(403, '支付返回错误');
-                                }
-                                $pay = isset($r['msg']) ? $r['msg'] : '';
-                                $ret = [
-                                    'id' => $recharge->id,
-                                    'product_id' => $recharge->pid,
-                                    'content' => $recharge->type == self::TYPE_SCORE ? $recharge->amount . '积分' : ($recharge->type == self::TYPE_VIP ? $recharge->amount . '个月VIP' : ''),
-                                    'type' => $recharge->type,
-                                    'amount' => $recharge->amount,
-                                    'status' => $recharge->status,
-                                    'created_at' => $recharge->created_at ?: getCurrentTime(),
-                                    'vip_deadline' => $user->vip_deadline ?: '0',
-                                    'scores' => $user->remaining_scores ?: '0',
-                                    'pay' => $pay,
-                                ];
-                                $this->return_success($ret);
-                            } catch (Exception $e) {
-                                $this->error('curl return error', (array)$recharge);
-                                $this->return_error();
-                            }
-                        }
-                    } else {
-                        $this->error('recharge failed', (array)$recharge);
-                        $this->return_error();
-                    }
+                        ],
+                    ];
+                    $this->return_success($ret);
+                } catch (Exception $e) {
+                    $this->error('curl return error----', (array)$recharge);
+                    $this->return_error();
+                    return false;
                 }
             }
+        } else {
+            $this->error('recharge failed', (array)$recharge);
+            $this->return_error();
         }
+        return true;
     }
 
     public function xianfutest()
     {
         $real_money = 100;
-        $paytype = 21;
+        $paytype = 22;
+        $orderid = 3;
         $payurl = Config::getXfPayUrl();
         if (empty($payurl)) {
             $this->error('xfPayUrl config is empty');
@@ -305,12 +337,12 @@ class RechargeController extends BaseController
         }
         $payOpt = [
             'appid' => self::XF_APPID,
-            'orderid' => 1,
+            'orderid' => $orderid,
             'fee' => $real_money,
             'tongbu_url' => self::XF_CALLBACK,
             'clientip' => get_client_ip(),
             'back_url' => 'http://www.dianzanyun.com',
-            'sign' => md5(self::XF_APPID . 1 . $real_money . self::XF_CALLBACK . self::XF_APPKEY),
+            'sign' => md5(self::XF_APPID . $orderid . $real_money . self::XF_CALLBACK . self::XF_APPKEY),
             'sfrom' => 'wap',
             'paytype' => $paytype,
         ];
@@ -323,6 +355,7 @@ class RechargeController extends BaseController
             $r = $curl->response;
             try {
                 $r = json_decode($r, true);
+                $this->error('curl debug:', [$r, $payOpt]);
                 $returncode = isset($r['code']) ? $r['code'] : null;
                 if ($returncode != 'success') {
                     $this->error('curl return error', [(array)$payOpt, (array)$r]);
@@ -410,91 +443,114 @@ class RechargeController extends BaseController
 		$product_id = $_POST['product_id'];
 		$money = $_POST['money'];
 
-		if (empty($product_id) || empty($money)) {
+		if (!isset($_POST['product_id']) || empty($money)) {
 			$this->error('rechare create failed: params wrong', [ $_POST ]);
 			$this->return_error(400, '参数不完整');
-		} else {
-			$product = Product::findOne('products', ' id = ? AND status = ? ', [  $_POST['product_id'], self::PRODUCT_STATUS_ONLINE ]);
-			if (empty($product)) {
-				$this->return_error(400, '充值产品不存在');
-			} else {
-				$user = User::findOne('users', ' id = ? ', [ $this->token->uid ]);
-				if (empty($user)) {
-					$this->return_error();
-				} else {
-					// 验证充值金额是否合法
-					$is_vip = $user->vip_deadline >= getCurrentTime();
-					$discount = $is_vip ? Config::getVipRechargeDiscount() : 100;
-					$real_money = ceil($product->money * $discount / 100);
-					if ($real_money != $money) {
-						$this->error('recharge money not valid', [ $user, $is_vip, $discount, $real_money, $_POST ]);
-						$this->return_error(401, '充值金额不合法');
-						exit;
-					}
-
-					$recharge = Recharge::dispense('recharges');
-					$recharge->uid = $user->id;
-					$recharge->pid = $product->id;
-					$recharge->money = $real_money;
-					$recharge->type = $product->type;
-					$recharge->amount = $product->amount;
-					$recharge->attach = $product->attach;
-					$recharge->status = self::PAY_STATUS_NO;
-					$recharge->platform = strtolower($this->platform) == 'android' ? self::PLATFORM_ANDROID : self::PLATFORM_IOS;
-
-					if (Recharge::store($recharge)) {
-						$options = [
-    						'app_id' => 'wx86768e03c307a935',
-    						// payment
-    						'payment' => [
-    						    'merchant_id'        => '1502090761',
-    						    'key'                => 'ce19cbd650152f3fa0e43b3a8e6f4687',
-    						    'notify_url'         => 'http://106.75.77.8/recharge/wx_callback',       // 你也可以在下单时单独设置来想覆盖它
-    						],
-						];
-
-						$app = new Application($options);
-						$attributes = [
-						    'trade_type'       => 'APP', // JSAPI，NATIVE，APP...
-						    'body'             => '空间点赞大师充值',
-						    'detail'           => '空间点赞大师充值',
-						    'out_trade_no'     => $recharge->id,
-						    'total_fee'        => $real_money, // 单位：分
-						];
-
-						$order = new Order($attributes);
-						$result = $app->payment->prepare($order);
-                        $prepayId = 0;
-						if ($result->return_code == 'SUCCESS' && $result->result_code == 'SUCCESS'){
-						    $prepayId = $result->prepay_id;
-						}
-                        $paymentConfig = $app->payment->configForAppPayment($prepayId);
-			if (!empty($paymentConfig)) {
-				$paymentConfig = array_map('strval', $paymentConfig);
-			}
-
-
-						$this->return_success(
-							[
-								'id' => $recharge->id,
-								'product_id' => $recharge->pid,
-								'content' => $recharge->type == self::TYPE_SCORE ? $recharge->amount . '积分' : ($recharge->type == self::TYPE_VIP ? $recharge->amount . '个月VIP' : ''),
-								'type' => $recharge->type,
-								'amount' => $recharge->amount,
-								'status' => $recharge->status,
-								'created_at' => $recharge->created_at ?: getCurrentTime(),
-								'vip_deadline' => $user->vip_deadline ?: '0',
-								'scores' => $user->remaining_scores ?: '0',
-								'pay' => $paymentConfig,
-							]
-						);
-					} else {
-						$this->error('recharge failed', (array)$recharge);
-						$this->return_error();
-					}
-				}
-			}
+			return false;
 		}
+        $user = User::findOne('users', ' id = ? ', [ $this->token->uid ]);
+        if (empty($user)) {
+            $this->return_error();
+            return false;
+        }
+        if ($product_id == 0) {// 首充
+            $first_recharge_params = Config::getFirstRechargeParams();
+            if (empty($first_recharge_params)) {
+                $this->return_error(404, '无首充大礼包');
+                return false;
+            }
+            if (!empty(Recharge::count('recharges', ' uid = ? AND status = ? ', [ $user->id, self::PAY_STATUS_YES ]))) {
+                $this->return_error(403, '已经充值过，没有首充资格');
+                return false;
+            }
+            $first_recharge_params = json_decode($first_recharge_params);
+            $real_money = $first_recharge_params->money;
+
+            $recharge = Recharge::dispense('recharges');
+            $recharge->uid = $user->id;
+            $recharge->money = $first_recharge_params->money;
+            $recharge->type = self::TYPE_SCORE;
+            $recharge->amount = $first_recharge_params->scores + $first_recharge_params->attach;
+            $recharge->attach = $first_recharge_params->vip;
+            $recharge->status = self::PAY_STATUS_NO;
+            $recharge->platform = strtolower($this->platform) == 'android' ? self::PLATFORM_ANDROID : self::PLATFORM_IOS;
+        } else {// 非首充
+            $product = Product::findOne('products', ' id = ? AND status = ? ', [  $product_id, self::PRODUCT_STATUS_ONLINE ]);
+            if (empty($product)) {
+                $this->return_error(400, '充值产品不存在');
+                return false;
+            }
+            // 验证充值金额是否合法
+            $is_vip = $user->vip_deadline >= getCurrentTime();
+            $discount = $is_vip ? Config::getVipRechargeDiscount() : 100;
+            $real_money = ceil($product->money * $discount / 100);
+            if ($real_money != $money) {
+                $this->error('recharge money not valid', [ $user, $is_vip, $discount, $real_money, $_POST ]);
+                $this->return_error(401, '充值金额不合法');
+                exit;
+            }
+
+            $recharge = Recharge::dispense('recharges');
+            $recharge->uid = $user->id;
+            $recharge->pid = $product->id;
+            $recharge->money = $real_money;
+            $recharge->type = $product->type;
+            $recharge->amount = $product->amount;
+            $recharge->attach = $product->attach;
+            $recharge->status = self::PAY_STATUS_NO;
+            $recharge->platform = strtolower($this->platform) == 'android' ? self::PLATFORM_ANDROID : self::PLATFORM_IOS;
+        }
+
+        if (Recharge::store($recharge)) {
+            $options = [
+                'app_id' => 'wx86768e03c307a935',
+                // payment
+                'payment' => [
+                    'merchant_id'        => '1502090761',
+                    'key'                => 'ce19cbd650152f3fa0e43b3a8e6f4687',
+                    'notify_url'         => 'http://106.75.77.8/recharge/wx_callback',       // 你也可以在下单时单独设置来想覆盖它
+                ],
+            ];
+
+            $app = new Application($options);
+            $attributes = [
+                'trade_type'       => 'APP', // JSAPI，NATIVE，APP...
+                'body'             => '空间点赞大师充值',
+                'detail'           => '空间点赞大师充值',
+                'out_trade_no'     => $recharge->id,
+                'total_fee'        => $real_money, // 单位：分
+            ];
+
+            $order = new Order($attributes);
+            $result = $app->payment->prepare($order);
+            $prepayId = 0;
+            if ($result->return_code == 'SUCCESS' && $result->result_code == 'SUCCESS'){
+                $prepayId = $result->prepay_id;
+            }
+            $paymentConfig = $app->payment->configForAppPayment($prepayId);
+            if (!empty($paymentConfig)) {
+                $paymentConfig = array_map('strval', $paymentConfig);
+            }
+
+            $this->return_success(
+                [
+                    'id' => $recharge->id,
+                    'product_id' => $recharge->pid,
+                    'content' => $recharge->type == self::TYPE_SCORE ? $recharge->amount . '积分' : ($recharge->type == self::TYPE_VIP ? $recharge->amount . '个月VIP' : ''),
+                    'type' => $recharge->type,
+                    'amount' => $recharge->amount,
+                    'status' => $recharge->status,
+                    'created_at' => $recharge->created_at ?: getCurrentTime(),
+                    'vip_deadline' => $user->vip_deadline ?: '0',
+                    'scores' => $user->remaining_scores ?: '0',
+                    'pay' => $paymentConfig,
+                ]
+            );
+        } else {
+            $this->error('recharge failed', (array)$recharge);
+            $this->return_error();
+        }
+        return true;
 	}
 
 	/**
@@ -531,7 +587,7 @@ class RechargeController extends BaseController
 	}
 
 	/**
-	 * 充值支付回调(bmob)
+	 * 充值支付回调(bmob)--废弃
 	 */
 	public function callback()
 	{
@@ -618,7 +674,7 @@ class RechargeController extends BaseController
 	}
 
 	/**
-	 * 充值支付回调(话付通)
+	 * 充值支付回调(话付通)--废弃
 	 */
 	public function callback_71pay()
 	{
@@ -717,7 +773,7 @@ class RechargeController extends BaseController
 	}
 
 	/**
-	 * 充值支付回调(优支付)
+	 * 充值支付回调(优支付)--废弃
 	 */
 	public function callback_you()
 	{
@@ -835,7 +891,7 @@ class RechargeController extends BaseController
 	}
 
 	/**
-	 * 充值支付回调2(优支付)
+	 * 充值支付回调2(优支付)--废弃
 	 */
 	public function callback_you2()
 	{
@@ -953,7 +1009,7 @@ class RechargeController extends BaseController
 	}
 
 	/**
-	 * 充值支付回调3(优支付)
+	 * 充值支付回调3(优支付)--废弃
 	 */
 	public function callback_you3()
 	{
@@ -1071,7 +1127,7 @@ class RechargeController extends BaseController
 	}
 
 	/**
-	 * 充值支付回调(完美点卡支付)
+	 * 充值支付回调(完美点卡支付)--废弃
 	 */
 	public function callback_wm()
 	{
@@ -1183,8 +1239,6 @@ class RechargeController extends BaseController
 	 */
 	public function callback_wx()
 	{
-		$this->error(__FUNCTION__ . ' pay callback debug', [$_REQUEST]);
-
 		$options = [
     		'app_id' => 'wx86768e03c307a935',
     		// payment
@@ -1197,9 +1251,10 @@ class RechargeController extends BaseController
 		$app = new Application($options);
 
 		$response = $app->payment->handleNotify(function ($notify, $successful) {
+            $this->error('callback_wx pay callback debug', [(array)$notify]);
 		    $recharge = Recharge::findOne('recharges', ' id = ? ', [ $notify->out_trade_no ]);
 		    if (empty($recharge)) {
-		    	$this->error(__FUNCTION__ . ' rechage not exists', [$_REQUEST]);
+		    	$this->error(__FUNCTION__ . ' rechage not exists', [(array)$notify]);
 		    	return 'Order not exist';
 		    }
 
@@ -1208,13 +1263,13 @@ class RechargeController extends BaseController
 			}
 
 			if (!$successful) {
-				$this->error(__FUNCTION__ . ' pay failed', [$_REQUEST]);
+				$this->error(__FUNCTION__ . ' pay failed', [(array)$notify]);
 		    	return true;
 			}
 
 			$user = User::findOne('users', ' id = ? ', [ $recharge->uid ]);
 			if (empty($user)) {
-				$this->error(__FUNCTION__ . 'empty user', [$_REQUEST, $recharge]);
+				$this->error(__FUNCTION__ . 'empty user', [(array)$notify, $recharge]);
 				return true;
 			}
 
@@ -1257,7 +1312,7 @@ class RechargeController extends BaseController
 				// 充值状态
 				$recharge->status = self::PAY_STATUS_YES;
 				// 支付方式
-				$recharge->pay_type = $pay_type == self::YOU_PAY_PAYTYPE_WECHAT ? self::PAY_TYPE_WECHAT : ( $pay_type == self::YOU_PAY_PAYTYPE_ALIPAY ? self::PAY_TYPE_ALIPAY : self::PAY_TYPE_OTHER );
+				$recharge->pay_type = self::PAY_TYPE_WECHAT;
 				$recharge->updated_at = new \Datetime;
 
 				// 使用该字段区分两个优支付渠道
@@ -1283,7 +1338,7 @@ class RechargeController extends BaseController
      */
     public function callback_xf()
     {
-        $order_id = $_GET['order_id'];
+        $order_id = $_GET['orderid'];
         $status = $_GET['result'];
         $money = $_GET['fee'];
         $pay_type = $_GET['paytype'];
@@ -1317,10 +1372,12 @@ class RechargeController extends BaseController
         if ($recharge->money != $money) {
             $this->error('xf pay callback failed: wrong money', [$_GET, $recharge]);
             echo 'failed';
+            return;
         } else {
             $user = User::findOne('users', ' id = ? ', [ $recharge->uid ]);
             if (empty($user)) {
                 $this->error('xf pay callback failed: empty user', [$_GET, $recharge]);
+                return;
             } else {
                 // 事务处理
                 Recharge::begin();
@@ -1380,7 +1437,7 @@ class RechargeController extends BaseController
     }
 
 	/**
-	 * 充值支付回调(钱进支付)
+	 * 充值支付回调(钱进支付)--废弃
 	 */
 	public function callback_qj()
 	{
@@ -1630,6 +1687,7 @@ class RechargeController extends BaseController
 							'vip' => $first_recharge_params->vip,
 							'people_amount' => $first_recharge_params->people + $first_recharge_params->incre_people * intval((getCurrentTime() - strtotime($first_recharge_params->start_day)) / 86400),
 							'extra' => '',
+                            'product_id' => 0,
 						]
 					);
 				}

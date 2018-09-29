@@ -687,12 +687,13 @@
    }
 ```
 
-## 优支付充值
+## 先付支付充值
 * 地址: **/recharge/xianfu**
 * Method: **POST**
 * 参数:
     * `product_id` *string* 商品编号
     * `money` *string* 实际支付金额, 单位分
+    * `paytype` *int* 支付类型
 * 返回值:
 
 ```json
@@ -701,18 +702,51 @@
        "error": "",
        "result" : 
        {
-           "id": xxx, // 充值ID
-           "product_id": xxx, // 商品编号
-           "content": xxx,	// 描述，如：1000积分/3个月VIP
-           "status": xxx,	// 0:未付款，1:已付款，2:已完成，3:失败
+           "id": 1, // 充值ID
+           "product_id": 1, // 商品编号
+           "content": "xxx",	// 描述，如：1000积分/3个月VIP
+           "status": 0,	// 0:未付款，1:已付款，2:已完成，3:失败
            "created_at": 1456382625,
-           "vip_deadline": xxx,  // VIP到期的时间戳
-           "scores": xxx,        // 剩余总积分
+           "vip_deadline": "xxx",  // VIP到期的时间戳
+           "scores": "xxx",        // 剩余总积分
            "pay": {
-                'payurl':xxx//生成的支付链接或者二维码图片或者跳转的页面
+                "payurl":"xxx",//生成的支付链接或者二维码图片或者跳转的页面
+                "paytype":21 //支付类型
            }
        }
    }
+```
+
+```json
+   {
+       "error_code": 100,
+       "error": "创建失败原因",
+       "result": null,
+   }
+```
+
+## 获取首充大礼包信息
+* 地址: **/recharge/first**
+* Method: **GET**
+* 参数:
+    无
+* 返回值:
+
+```json
+    {
+        "error_code": 0,
+        "error": "",
+        "result" : 
+        {
+            "money": 900,             // 金额，单位分
+            "scores": 9000,          // 积分数
+            "attach": 3000,          // 赠送积分数
+            "vip": 1,                 // 赠送的VIP月数
+            "people_amount": 29651,   // 已购买的人数
+            "extra": "",               // 其他，暂时没用
+            "product_id": 0         //产品id，占位符0
+        }
+    }
 ```
 
 ```json
