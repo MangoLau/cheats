@@ -326,7 +326,44 @@ class RechargeController extends BaseController
 
     public function xianfutest()
     {
-        $real_money = 100;
+        $trade_type = 'MWEB';
+        $options = [
+            'app_id' => 'wx86768e03c307a935',
+            // payment
+            'payment' => [
+                'merchant_id'        => '1502090761',
+                'key'                => 'ce19cbd650152f3fa0e43b3a8e6f4687',
+                'notify_url'         => 'http://106.75.77.8/recharge/wx_callback',       // 你也可以在下单时单独设置来想覆盖它
+            ],
+        ];
+
+        $app = new Application($options);
+        $attributes = [
+            'trade_type'       => $trade_type, // JSAPI，NATIVE，APP...
+            'body'             => '空间点赞大师充值',
+            'detail'           => '空间点赞大师充值',
+            'out_trade_no'     => 'a1',
+            'total_fee'        => 100, // 单位：分
+        ];
+        $attributes['scene_info'] = json_encode([
+            'h5_info' => [
+                'type' => 'Wap',
+                'wap_url' => 'http://www.dianzanyun.com',
+                'wap_name' => '空间点赞大师充值'
+            ],
+        ]);
+
+        $order = new Order($attributes);
+        $result = $app->payment->prepare($order);
+        /*$prepayId = 0;
+        if ($result->return_code == 'SUCCESS' && $result->result_code == 'SUCCESS'){
+            $prepayId = $result->prepay_id;
+        }
+        $paymentConfig = $app->payment->configForAppPayment($prepayId);*/
+        $this->return_success((array)$result);
+
+
+        /*$real_money = 100;
         $paytype = 22;
         $orderid = 3;
         $payurl = Config::getXfPayUrl();
@@ -372,7 +409,7 @@ class RechargeController extends BaseController
                 $this->error('curl return error', (array)$payOpt);
                 $this->return_error();
             }
-        }
+        }*/
     }
 
 	// 微信转账直接加积分
@@ -442,6 +479,13 @@ class RechargeController extends BaseController
 	{
 		$product_id = $_POST['product_id'];
 		$money = $_POST['money'];
+		$trade_type = isset($_POST['trade_type']) ? $_POST['trade_type'] : 'APP';
+
+		if (!in_array($trade_type, ['APP', 'MWEB'])) {
+            $this->error('wechat rechare create failed: trade_type wrong', [ $_POST ]);
+            $this->return_error(400, '参数错误');
+            return false;
+        }
 
 		if (!isset($_POST['product_id']) || empty($money)) {
 			$this->error('rechare create failed: params wrong', [ $_POST ]);
@@ -514,12 +558,21 @@ class RechargeController extends BaseController
 
             $app = new Application($options);
             $attributes = [
-                'trade_type'       => 'APP', // JSAPI，NATIVE，APP...
+                'trade_type'       => $trade_type, // JSAPI，NATIVE，APP...
                 'body'             => '空间点赞大师充值',
                 'detail'           => '空间点赞大师充值',
                 'out_trade_no'     => $recharge->id,
                 'total_fee'        => $real_money, // 单位：分
             ];
+            if ($trade_type == 'MWEB') {
+                $attributes['scene_info'] = json_encode([
+                    'h5_info' => [
+                        'type' => 'Wap',
+                        'wap_url' => 'http://www.dianzanyun.com',
+                        'wap_name' => '空间点赞大师充值'
+                    ],
+                ]);
+            }
 
             $order = new Order($attributes);
             $result = $app->payment->prepare($order);
@@ -527,7 +580,18 @@ class RechargeController extends BaseController
             if ($result->return_code == 'SUCCESS' && $result->result_code == 'SUCCESS'){
                 $prepayId = $result->prepay_id;
             }
-            $paymentConfig = $app->payment->configForAppPayment($prepayId);
+            if ($trade_type == 'MWEB') {
+                $paymentConfig = [
+                    'appid' => $result->appid,
+                    'prepay_id' => $result->prepay_id,
+                    'nonce_str' => $result->nonce_str,
+                    'sign' => $result->sign,
+                    'mweb_url' => $result->mweb_url,
+                    'trade_type' => $result->trade_type,
+                ];
+            } else {
+                $paymentConfig = $app->payment->configForAppPayment($prepayId);
+            }
             if (!empty($paymentConfig)) {
                 $paymentConfig = array_map('strval', $paymentConfig);
             }
