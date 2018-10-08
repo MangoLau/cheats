@@ -581,14 +581,16 @@ class RechargeController extends BaseController
                 $prepayId = $result->prepay_id;
             }
             if ($trade_type == 'MWEB') {
+                $url = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
                 $paymentConfig = [
                     'appid' => $result->appid,
                     'prepay_id' => $result->prepay_id,
                     'nonce_str' => $result->nonce_str,
                     'sign' => $result->sign,
-                    'mweb_url' => $result->mweb_url,
+                    'mweb_url' => $result->mweb_url . '&redirect_url=' . urlencode($url),
                     'trade_type' => $result->trade_type,
                 ];
+                //$this->error('MWEB debug', $paymentConfig);
             } else {
                 $paymentConfig = $app->payment->configForAppPayment($prepayId);
             }
