@@ -288,7 +288,7 @@ class RechargeController extends BaseController
                 $r = $curl->response;
                 try {
                     $r = json_decode($r, true);
-                    $this->error('curl debug:', [$r, $payOpt]);
+//                    $this->error('curl debug:', [$r, $payOpt]);
                     $returncode = isset($r['code']) ? $r['code'] : null;
                     if ($returncode != 'success') {
                         $this->error('curl return error', [(array)$recharge, (array)$r]);
@@ -581,13 +581,12 @@ class RechargeController extends BaseController
                 $prepayId = $result->prepay_id;
             }
             if ($trade_type == 'MWEB') {
-                $url = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
                 $paymentConfig = [
                     'appid' => $result->appid,
                     'prepay_id' => $result->prepay_id,
                     'nonce_str' => $result->nonce_str,
                     'sign' => $result->sign,
-                    'mweb_url' => $result->mweb_url . '&redirect_url=' . urlencode($url),
+                    'mweb_url' => $result->mweb_url,
                     'trade_type' => $result->trade_type,
                 ];
                 //$this->error('MWEB debug', $paymentConfig);
