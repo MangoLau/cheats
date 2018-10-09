@@ -480,7 +480,13 @@ class RechargeController extends BaseController
 		$product_id = $_POST['product_id'];
 		$money = $_POST['money'];
 		$trade_type = isset($_POST['trade_type']) ? $_POST['trade_type'] : 'APP';
+		$account = isset($_POST['account']) ? $_POST['account'] : 'dianzan';// dianzan：空间点赞大师，simi：私密相册
 
+		if (!in_array($account, ['dianzan', 'simi'])) {
+            $this->error('wechat rechare create failed: account wrong', [ $_POST ]);
+            $this->return_error(400, '参数错误');
+            return false;
+        }
 		if (!in_array($trade_type, ['APP', 'MWEB'])) {
             $this->error('wechat rechare create failed: trade_type wrong', [ $_POST ]);
             $this->return_error(400, '参数错误');
@@ -546,32 +552,64 @@ class RechargeController extends BaseController
         }
 
         if (Recharge::store($recharge)) {
-            $options = [
-                'app_id' => 'wx86768e03c307a935',
-                // payment
-                'payment' => [
-                    'merchant_id'        => '1502090761',
-                    'key'                => 'ce19cbd650152f3fa0e43b3a8e6f4687',
-                    'notify_url'         => 'http://106.75.77.8/recharge/wx_callback',       // 你也可以在下单时单独设置来想覆盖它
-                ],
-            ];
-
-            $app = new Application($options);
-            $attributes = [
-                'trade_type'       => $trade_type, // JSAPI，NATIVE，APP...
-                'body'             => '空间点赞大师充值',
-                'detail'           => '空间点赞大师充值',
-                'out_trade_no'     => $recharge->id,
-                'total_fee'        => $real_money, // 单位：分
-            ];
-            if ($trade_type == 'MWEB') {
-                $attributes['scene_info'] = json_encode([
-                    'h5_info' => [
-                        'type' => 'Wap',
-                        'wap_url' => 'http://www.dianzanyun.com',
-                        'wap_name' => '空间点赞大师充值'
+            if ($account == 'dianzan') {// 空间点赞大师支付
+                $referer_url = 'http://www.kuzhikeji.com';
+                $options = [
+                    'app_id' => 'wx86768e03c307a935',
+                    // payment
+                    'payment' => [
+                        'merchant_id'        => '1502090761',
+                        'key'                => 'ce19cbd650152f3fa0e43b3a8e6f4687',
+                        'notify_url'         => 'http://106.75.77.8/recharge/wx_callback',       // 你也可以在下单时单独设置来想覆盖它
                     ],
-                ]);
+                ];
+
+                $app = new Application($options);
+                $attributes = [
+                    'trade_type'       => $trade_type, // JSAPI，NATIVE，APP...
+                    'body'             => '空间点赞大师充值',
+                    'detail'           => '空间点赞大师充值',
+                    'out_trade_no'     => $recharge->id,
+                    'total_fee'        => $real_money, // 单位：分
+                ];
+                if ($trade_type == 'MWEB') {
+                    $attributes['scene_info'] = json_encode([
+                        'h5_info' => [
+                            'type' => 'Wap',
+                            'wap_url' => 'http://www.dianzanyun.com',
+                            'wap_name' => '空间点赞大师充值'
+                        ],
+                    ]);
+                }
+            } else { // 私密相册支付
+                $referer_url = 'http://www.dianzanyun.com';
+                $options = [
+                    'app_id' => 'wxaca09f0ad08d3962',
+                    // payment
+                    'payment' => [
+                        'merchant_id'        => '1503094051',
+                        'key'                => 'wL1tBb09rydskmpjsZTlfmULJ11pZ6CE',
+                        'notify_url'         => 'http://106.75.77.8/recharge/wx_callback',       // 你也可以在下单时单独设置来想覆盖它
+                    ],
+                ];
+
+                $app = new Application($options);
+                $attributes = [
+                    'trade_type'       => $trade_type, // JSAPI，NATIVE，APP...
+                    'body'             => '私密相册精灵（）',
+                    'detail'           => '私密相册精灵（）',
+                    'out_trade_no'     => $recharge->id,
+                    'total_fee'        => $real_money, // 单位：分
+                ];
+                if ($trade_type == 'MWEB') {
+                    $attributes['scene_info'] = json_encode([
+                        'h5_info' => [
+                            'type' => 'Wap',
+                            'wap_url' => 'http://www.dianzanyun.com',
+                            'wap_name' => '私密相册精灵（）'
+                        ],
+                    ]);
+                }
             }
 
             $order = new Order($attributes);
@@ -588,6 +626,7 @@ class RechargeController extends BaseController
                     'sign' => $result->sign,
                     'mweb_url' => $result->mweb_url,
                     'trade_type' => $result->trade_type,
+                    'referer_url' => $referer_url,
                 ];
                 //$this->error('MWEB debug', $paymentConfig);
             } else {
