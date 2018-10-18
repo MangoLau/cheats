@@ -29,7 +29,7 @@ class OrderProgressCommand extends BaseCommand
 	/**
 	 * 每次执行100个
 	 */
-	protected function execute(InputInterface $input, OutputInterface $output)
+	/*protected function execute(InputInterface $input, OutputInterface $output)
 	{
 		set_time_limit(300);				// 五分钟超时时间, 如果不设置超时时间可能会出现极端情况进程假死一直占用服务器资源
 
@@ -84,5 +84,19 @@ class OrderProgressCommand extends BaseCommand
 		} else {
 			$this->logger->AddDebug('order progress update - no orders', []);
 		}
-	}
+	}*/
+
+    protected function execute(InputInterface $input, OutputInterface $output)
+    {
+        set_time_limit(300);
+        $startDate = date('Y-m-d H:i:s', strtotime('-1 day'));
+        $completeStatus = self::ORDER_STATUS_COMPLETE;
+        $sql = "UPDATE `orders` SET `status`={$completeStatus} WHERE `status`=1 AND `created_at` <= '{$startDate}'";
+        $this->logger->AddDebug('order progress update ：', [ $sql ]);
+        $res = Order::exec($sql);
+        $this->logger->AddDebug('[complete] order progress update ：', [ (array)$res ]);
+        if (!$res) {
+            $this->logger->AddDebug('[error] order progress update ：', [ $sql ]);
+        }
+    }
 }
