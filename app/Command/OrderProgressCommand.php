@@ -89,9 +89,10 @@ class OrderProgressCommand extends BaseCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         set_time_limit(300);
+        $now = date('Y-m-d H:i:s');
         $startDate = date('Y-m-d H:i:s', strtotime('-1 day'));
         $completeStatus = self::ORDER_STATUS_COMPLETE;
-        $sql = "UPDATE `orders` SET `status`={$completeStatus} WHERE `status`=1 AND `created_at` <= '{$startDate}'";
+        $sql = "UPDATE `orders` SET `status`={$completeStatus},`updated_at`='{$now}' WHERE `status`=1 AND `created_at` <= '{$startDate}'";
         $this->logger->AddDebug('order progress update ：', [ $sql ]);
         $res = Order::exec($sql);
         $this->logger->AddDebug('[complete] order progress update ：', [ (array)$res ]);
