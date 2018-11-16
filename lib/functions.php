@@ -428,3 +428,12 @@ if (!function_exists('getQmkgZpid')) {
 		return $query['s'];
 	}
 }
+
+// 通过抖音复制的链接获取url
+if (!function_exists('getDouyinUrl')) {
+	function getDouyinUrl($str)
+    {
+        $r = preg_match_all("#\bhttps?://[^\s()<>]+(?:\([\w\d]+\)|([^[:punct:]\s]|/))#", $str, $matchs);
+        return $r ? $matchs[0][0] : false;
+	}
+}

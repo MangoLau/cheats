@@ -83,9 +83,10 @@ class OrderController extends BaseController
 
 		$ks_url = $_POST['ks_url'];				// 快手链接
 		$qmkg_url = $_POST['qmkg_url'];			// 全民K歌链接
+        $kszp_url = $douyin_url = '';                       //抖音链接
 
 		// 抖音作品链接
-		if (!empty($douyin_zpid)) {
+/*		if (!empty($douyin_zpid)) {
 			if (!filter_var($douyin_zpid, FILTER_VALIDATE_URL)) {
 				$this->return_error(400, '抖音链接不合法');
 				return;
@@ -96,10 +97,24 @@ class OrderController extends BaseController
 				$this->return_error(401, '抖音链接不合法');
 				return;
 			}
-		}
+		}*/
+
+        // 抖音作品链接
+        if (!empty($douyin_zpid)) {
+		    if (!filter_var($douyin_zpid, FILTER_VALIDATE_URL)) {
+                $douyin_url = getDouyinUrl($douyin_zpid);
+                if (!$douyin_url) {
+                    $this->return_error(406, '抖音链接不合法');
+                    return;
+                }
+            } else {
+		        $douyin_url = $douyin_zpid;
+            }
+            $douyin_zpid = '';
+        }
 
 		// 抖音个人中心链接
-		if (!empty($douyin_uid)) {
+		/*if (!empty($douyin_uid)) {
 			if (!filter_var($douyin_uid, FILTER_VALIDATE_URL)) {
 				$this->return_error(400, '抖音链接不合法');
 				return;
@@ -110,7 +125,22 @@ class OrderController extends BaseController
 				$this->return_error(401, '抖音链接不合法');
 				return;
 			}
-		}
+		}*/
+
+        // 抖音个人中心链接
+        if (!empty($douyin_uid)) {
+            if (!filter_var($douyin_uid, FILTER_VALIDATE_URL)) {
+                $douyin_url = getDouyinUrl($douyin_uid);
+                if (!$douyin_url) {
+                    $this->return_error(406, '抖音链接不合法');
+                    return;
+                }
+            } else {
+                $douyin_url = $douyin_uid;
+            }
+            $douyin_uid = '';
+        }
+
 
 		// 快手链接
 		if (!empty($ks_url)) {
@@ -119,9 +149,12 @@ class OrderController extends BaseController
 				return;
 			}
 
-			$ks_params = getKuaishouZpidAndUid($ks_url);
-			$ksid = $ks_params['userId'];
-			$zpid = $ks_params['photoId'];
+//			$ks_params = getKuaishouZpidAndUid($ks_url);
+//			$ksid = $ks_params['userId'];
+//			$zpid = $ks_params['photoId'];
+			$kszp_url = $ks_url;// 直接把链接链接提交到卡盟
+            $ksid = '';
+            $zpid = '';
 		}
 
 		// 全民K歌链接
@@ -198,9 +231,11 @@ class OrderController extends BaseController
 										$order->rzid = $rzid;
 										$order->ksid = $ksid;
 										$order->zpid = $zpid;
+										$order->kszp_url = $kszp_url;
 										$order->qmkg_gqid = $qmkg_gqid;
 										$order->douyin_uid = $douyin_uid;
 										$order->douyin_zpid = $douyin_zpid;
+										$order->douyin_url = $douyin_url;
 										$order->channel = $channel;
 										$order->platform = strtolower($this->platform) == 'android' ? self::PLATFORM_ANDROID : self::PLATFORM_IOS;
 										$order->status = $is_laquanquan ? self::ORDER_STATUS_COMPLETE : self::ORDER_STATUS_DEALING;	// 

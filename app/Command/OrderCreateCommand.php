@@ -67,6 +67,9 @@ class OrderCreateCommand extends BaseCommand
 						if (!empty($order->zpid)) {
 							$extra['zpid'] = $order->zpid;
 						}
+						if (!empty($order->zpid)) {
+							$extra['kszp_url'] = $order->kszp_url;
+						}
 						if (!empty($order->qmkg_gqid)) {
 							$extra['qmkg_gqid'] = $order->qmkg_gqid;
 						}
@@ -76,10 +79,13 @@ class OrderCreateCommand extends BaseCommand
 						if (!empty($order->douyin_zpid)) {
 							$extra['zh'] = $order->douyin_zpid;
 						}
+						if (!empty($order->douyin_url)) {
+							$extra['zh'] = $order->douyin_url;
+						}
 	
 						$ret = $c->handle($order->qq, $order->amount, $extra);
 						if ($ret->error) {
-							$this->logger->addError('order curl error', [ $ret->error, $ret->errorMessage, $ret->curlErrorMessage, $cheat->login_url, $cheat->url, $order_id ]);
+							$this->logger->addError('order curl error', [ $ret->error, $ret->errorMessage, $ret->curlErrorMessage, $cheat->login_url, $cheat->url, $order_id, $extra ]);
 
 							// 重新入队列到尾部
 							$redis->rpush(self::ORDER_QUEUE_KEY, $order_id);
