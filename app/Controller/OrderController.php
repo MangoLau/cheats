@@ -70,6 +70,7 @@ class OrderController extends BaseController
 		
 		$ssid = $_POST['ssid'] ?: '';			// 说说id
 		$ssnr = $_POST['ssnr'] ?: '';			// 说说内容
+        $plnr = $_POST['plnr'] ?: '';           // 说说评论内容
 
 		$rzid = $_POST['rzid'] ?: '';			// 日志id
 		$rznr = $_POST['rznr'] ?: '';			// 日志内容
@@ -84,63 +85,6 @@ class OrderController extends BaseController
 		$ks_url = $_POST['ks_url'];				// 快手链接
 		$qmkg_url = $_POST['qmkg_url'];			// 全民K歌链接
         $kszp_url = $douyin_url = '';                       //抖音链接
-
-		// 抖音作品链接
-/*		if (!empty($douyin_zpid)) {
-			if (!filter_var($douyin_zpid, FILTER_VALIDATE_URL)) {
-				$this->return_error(400, '抖音链接不合法');
-				return;
-			}
-
-			$douyin_zpid = explode('/', $douyin_zpid)[5];
-			if (empty($douyin_zpid)) {
-				$this->return_error(401, '抖音链接不合法');
-				return;
-			}
-		}*/
-
-        // 抖音作品链接
-        if (!empty($douyin_zpid)) {
-		    if (!filter_var($douyin_zpid, FILTER_VALIDATE_URL)) {
-                $douyin_url = getDouyinUrl($douyin_zpid);
-                if (!$douyin_url) {
-                    $this->return_error(406, '抖音链接不合法');
-                    return;
-                }
-            } else {
-		        $douyin_url = $douyin_zpid;
-            }
-            $douyin_zpid = '';
-        }
-
-		// 抖音个人中心链接
-		/*if (!empty($douyin_uid)) {
-			if (!filter_var($douyin_uid, FILTER_VALIDATE_URL)) {
-				$this->return_error(400, '抖音链接不合法');
-				return;
-			}
-
-			$douyin_uid = explode('/', $douyin_uid)[5];
-			if (empty($douyin_uid)) {
-				$this->return_error(401, '抖音链接不合法');
-				return;
-			}
-		}*/
-
-        // 抖音个人中心链接
-        if (!empty($douyin_uid)) {
-            if (!filter_var($douyin_uid, FILTER_VALIDATE_URL)) {
-                $douyin_url = getDouyinUrl($douyin_uid);
-                if (!$douyin_url) {
-                    $this->return_error(406, '抖音链接不合法');
-                    return;
-                }
-            } else {
-                $douyin_url = $douyin_uid;
-            }
-            $douyin_uid = '';
-        }
-
 
 		// 快手链接
 		if (!empty($ks_url)) {
@@ -160,119 +104,196 @@ class OrderController extends BaseController
 		// 全民K歌链接
 		if (!empty($qmkg_url)) {
 			if (!filter_var($qmkg_url, FILTER_VALIDATE_URL)) {
-				$this->return_error(400, '全民K歌链接不合法');
-				return;
+			    $qmkg_url = getUrlByStr($qmkg_url);
+			    if (empty($qmkg_url) || !filter_var($qmkg_url, FILTER_VALIDATE_URL)) {
+                    $this->return_error(400, '全民K歌链接不合法');
+                    return;
+                }
 			}
-
 			$qmkg_gqid = getQmkgId($qmkg_url);
 		}
 
 		if (empty($cpid)) {
 			$this->return_error(400, '商品不存在');
-		} else {
-			$product = CheatProduct::findOne('cheatproducts', ' id = ? AND status = ? ', [ $cpid, self::PRODUCT_STATUS_ONLINE ]);
-
-			if (empty($product)) {
-				$this->return_error(401, '商品不存在');
-			} else {
-				$user = User::findOne('users', ' id = ? ', [ $this->token->uid ]);
-
-				if (empty($user)) {
-					$this->return_error();
-				} elseif (empty($user->qq)) {
-					$this->return_error(403, '请先绑定QQ');
-				} else {
-					// 获取用户积分是否足够
-					if ($user->remaining_scores < $product->scores) {
-						$this->return_error(403, '积分不足请先充值');
-					} else {
-						// 获取该用何种类型的卡密
-						$card = Card::findOne('cards', ' remaining >= ? AND type = ? AND status = ? ', [ $product->amount, $product->cid, self::CARD_STATUS_ONLINE ]);
-
-						if (empty($card)) {
-							$this->error('order create failed - no card', [ $cpid, $channel, $this->token->uid ]);
-							$this->return_error(500, '该业务暂时不可用，请稍后再试');
-						} else {
-							$cheat = Cheat::findOne('cheats', ' id = ? AND status = ? ', [ $product->cid, self::CHEAT_STATUS_ONLINE ]);
-							if (empty($cheat)) {
-								$this->return_error();
-							} else {
-								// 判断该业务是否需要vip身份
-								if ($cheat->need_vip && $user->vip_deadline < getCurrentTime()) {
-									$this->return_error(405, '该业务只开放给VIP用户');
-								} else {
-									// 事务处理
-									Order::begin();
-									try {
-										// 是否是拉圈圈业务
-										$is_laquanquan = $cheat->remark == 'laquanquan';
-
-										// 更新卡密剩余额度
-										$card->remaining =  $card->total-$product->amount;
-										Card::store($card);
-	
-										// 更新用户积分
-										$user->remaining_scores -= $product->scores;
-										User::store($user);
-
-										// 积分变动记录
-										ScoreLog::orderSpending($user->id, $product->scores, $cheat->title);
-	
-										// 生成订单
-										$order = Order::dispense('orders');
-										$order->identify = $card->identify;
-										$order->uid = $user->id;
-										$order->qq = $user->qq;
-										$order->cid = $product->cid;
-										$order->amount = $product->amount;
-										$order->real_amount = 0;
-										$order->scores = $product->scores;
-										$order->ssid = $ssid;
-										$order->rzid = $rzid;
-										$order->ksid = $ksid;
-										$order->zpid = $zpid;
-										$order->kszp_url = $kszp_url;
-										$order->qmkg_gqid = $qmkg_gqid;
-										$order->douyin_uid = $douyin_uid;
-										$order->douyin_zpid = $douyin_zpid;
-										$order->douyin_url = $douyin_url;
-										$order->channel = $channel;
-										$order->platform = strtolower($this->platform) == 'android' ? self::PLATFORM_ANDROID : self::PLATFORM_IOS;
-										$order->status = $is_laquanquan ? self::ORDER_STATUS_COMPLETE : self::ORDER_STATUS_DEALING;	// 
-										$order->created_day = date('Ymd', getCurrentTime());
-										Order::store($order);
-		
-										Order::commit();
-
-										// 进入队列进行处理
-										$redis = Credis::getInstance();
-										$redis->rpush(self::ORDER_QUEUE_KEY, $order->id);
-												
-										$ret = [];
-										if (foreachAble($order)) {
-											$ret['id'] = $order->id;
-											$ret['qq'] = $order->qq;
-											$ret['type'] = $cheat->title;
-											$ret['amount'] = $product->amount;
-											$ret['scores'] = $order->scores;
-											$ret['status'] = strval($order->status);
-											$ret['created_at'] = strval(getCurrentTime());
-										}
-	
-										$this->return_success($ret);
-									} catch (Exception $e) {
-										$this->error('order create rollbak', [$e->getMessages()]);
-										Order::rollback();
-							
-										$this->return_error();
-									}
-								}
-							}
-						}
-					}
-				}
-			}
+			return;
 		}
+
+		// 获取商品信息
+        $product = CheatProduct::findOne('cheatproducts', ' id = ? AND status = ? ', [ $cpid, self::PRODUCT_STATUS_ONLINE ]);
+        if (empty($product)) {
+            $this->return_error(401, '商品不存在');
+            return;
+        }
+
+        // 说说评论
+        if ($product->cid == 26) {
+            if (empty($plnr)) {
+                $this->return_error(407, '请填写评论内容');
+                return;
+            }
+            if (mb_strlen($plnr) > 35) {
+                $this->return_error(407, '评论内容在35个字符以内');
+                return;
+            }
+            if (empty($ssid)) {
+                $this->return_error(407, '说说ID有误');
+                return;
+            }
+        }
+
+        // 抖音作品评论
+        if ($product->cid == 30) {
+            if (empty($douyin_zpid)) {
+                $this->return_error(408, '请输入抖音链接');
+                return;
+            }
+            if (!filter_var($douyin_zpid, FILTER_VALIDATE_URL)) {
+                $douyin_url = getDouyinUrl($douyin_zpid);
+                if (!$douyin_url) {
+                    $this->return_error(406, '抖音链接不合法');
+                    return;
+                }
+            } else {
+                $douyin_url = $douyin_zpid;
+            }
+            $douyin_url = getEffectiveUrl($douyin_url);
+            $douyin_zpid = (explode('/', $douyin_url))[5];
+            $douyin_url = '';
+            if (empty($douyin_zpid)) {
+                $this->return_error(406, '抖音链接不合法');
+                return;
+            }
+
+        } else {
+            // 抖音作品链接
+            if (!empty($douyin_zpid)) {
+                if (!filter_var($douyin_zpid, FILTER_VALIDATE_URL)) {
+                    $douyin_url = getDouyinUrl($douyin_zpid);
+                    if (!$douyin_url) {
+                        $this->return_error(406, '抖音链接不合法');
+                        return;
+                    }
+                } else {
+                    $douyin_url = $douyin_zpid;
+                }
+                $douyin_zpid = '';
+            }
+
+            // 抖音个人中心链接
+            if (!empty($douyin_uid)) {
+                if (!filter_var($douyin_uid, FILTER_VALIDATE_URL)) {
+                    $douyin_url = getUrlByStr($douyin_uid);
+                    if (!$douyin_url) {
+                        $this->return_error(406, '抖音链接不合法');
+                        return;
+                    }
+                } else {
+                    $douyin_url = $douyin_uid;
+                }
+                $douyin_uid = '';
+            }
+        }
+
+        $user = User::findOne('users', ' id = ? ', [ $this->token->uid ]);
+        if (empty($user)) {
+            $this->return_error();
+            return;
+        }
+        if (empty($user->qq)) {
+            $this->return_error(403, '请先绑定QQ');
+            return;
+        }
+
+        // 获取用户积分是否足够
+        if ($user->remaining_scores < $product->scores) {
+            $this->return_error(403, '积分不足请先充值');
+            return;
+        }
+
+        // 获取该用何种类型的卡密
+        $card = Card::findOne('cards', ' remaining >= ? AND type = ? AND status = ? ', [ $product->amount, $product->cid, self::CARD_STATUS_ONLINE ]);
+        if (empty($card)) {
+            $this->error('order create failed - no card', [ $cpid, $channel, $this->token->uid ]);
+            $this->return_error(500, '该业务暂时不可用，请稍后再试');
+            return;
+        }
+
+        $cheat = Cheat::findOne('cheats', ' id = ? AND status = ? ', [ $product->cid, self::CHEAT_STATUS_ONLINE ]);
+        if (empty($cheat)) {
+            $this->return_error();
+        } else {
+            // 判断该业务是否需要vip身份
+            if ($cheat->need_vip && $user->vip_deadline < getCurrentTime()) {
+                $this->return_error(405, '该业务只开放给VIP用户');
+            } else {
+                // 事务处理
+                Order::begin();
+                try {
+                    // 是否是拉圈圈业务
+                    $is_laquanquan = $cheat->remark == 'laquanquan';
+
+                    // 更新卡密剩余额度
+                    $card->remaining =  $card->total-$product->amount;
+                    Card::store($card);
+
+                    // 更新用户积分
+                    $user->remaining_scores -= $product->scores;
+                    User::store($user);
+
+                    // 积分变动记录
+                    ScoreLog::orderSpending($user->id, $product->scores, $cheat->title);
+
+                    // 生成订单
+                    $order = Order::dispense('orders');
+                    $order->identify = $card->identify;
+                    $order->uid = $user->id;
+                    $order->qq = $user->qq;
+                    $order->cid = $product->cid;
+                    $order->amount = $product->amount;
+                    $order->real_amount = 0;
+                    $order->scores = $product->scores;
+                    $order->ssid = $ssid;
+                    $order->rzid = $rzid;
+                    $order->ksid = $ksid;
+                    $order->zpid = $zpid;
+                    $order->kszp_url = $kszp_url;
+                    $order->qmkg_gqid = $qmkg_gqid;
+                    $order->douyin_uid = $douyin_uid;
+                    $order->douyin_zpid = $douyin_zpid;
+                    $order->douyin_url = $douyin_url;
+                    $order->channel = $channel;
+                    $order->plnr = $plnr;
+                    $order->platform = strtolower($this->platform) == 'android' ? self::PLATFORM_ANDROID : self::PLATFORM_IOS;
+                    $order->status = $is_laquanquan ? self::ORDER_STATUS_COMPLETE : self::ORDER_STATUS_DEALING;	//
+                    $order->created_day = date('Ymd', getCurrentTime());
+                    Order::store($order);
+
+                    Order::commit();
+
+                    // 进入队列进行处理
+                    $redis = Credis::getInstance();
+                    $redis->rpush(self::ORDER_QUEUE_KEY, $order->id);
+
+                    $ret = [];
+                    if (foreachAble($order)) {
+                        $ret['id'] = $order->id;
+                        $ret['qq'] = $order->qq;
+                        $ret['type'] = $cheat->title;
+                        $ret['amount'] = $product->amount;
+                        $ret['scores'] = $order->scores;
+                        $ret['status'] = strval($order->status);
+                        $ret['created_at'] = strval(getCurrentTime());
+                    }
+
+                    $this->return_success($ret);
+                } catch (Exception $e) {
+                    $this->error('order create rollbak', [$e->getMessages()]);
+                    Order::rollback();
+
+                    $this->return_error();
+                }
+            }
+        }
 	}
 
 	/**

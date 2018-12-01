@@ -1,10 +1,2 @@
-
-.idea/cheats.iml
-
-.idea/cheats.iml
-
-.idea/inspectionProfiles/Project_Default.xml
-
-.idea/modules.xml
-
-.idea/workspace.xml
+.idea/*
+cheats.sql

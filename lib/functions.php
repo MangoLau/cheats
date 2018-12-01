@@ -437,3 +437,27 @@ if (!function_exists('getDouyinUrl')) {
         return $r ? $matchs[0][0] : false;
 	}
 }
+
+// 在字符串中获取url
+if (!function_exists('getUrlByStr')) {
+	function getUrlByStr($str)
+    {
+        $r = preg_match_all("#\bhttps?://[^\s()<>]+(?:\([\w\d]+\)|([^[:punct:]\s]|/))#", $str, $matchs);
+        return $r ? $matchs[0][0] : false;
+	}
+}
+
+// 获取短链接跳转后的真实链接
+if (!function_exists('getEffectiveUrl')) {
+    function getEffectiveUrl($url)
+    {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Must be set to true so that PHP follows any "Location:" header
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_exec($ch); // $a will contain all headers
+        $url = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+        return $url;
+    }
+}

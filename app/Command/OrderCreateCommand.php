@@ -58,6 +58,9 @@ class OrderCreateCommand extends BaseCommand
 						if (!empty($order->ssid)) {
 							$extra['ssid'] = $order->ssid;
 						}
+						if (!empty($order->plnr)) {
+						    $extra['plnr'] = $order->plnr;
+                        }
 						if (!empty($order->rzid)) {
 							$extra['rzid'] = $order->rzid;
 						}
@@ -66,9 +69,6 @@ class OrderCreateCommand extends BaseCommand
 						}
 						if (!empty($order->zpid)) {
 							$extra['zpid'] = $order->zpid;
-						}
-						if (!empty($order->zpid)) {
-							$extra['kszp_url'] = $order->kszp_url;
 						}
 						if (!empty($order->qmkg_gqid)) {
 							$extra['qmkg_gqid'] = $order->qmkg_gqid;
@@ -82,6 +82,21 @@ class OrderCreateCommand extends BaseCommand
 						if (!empty($order->douyin_url)) {
 							$extra['zh'] = $order->douyin_url;
 						}
+						// QQ个性标签
+						if ($order->cid == 27) {
+						    $extra['zh'] = $order->qq;
+                        }
+                        // 快手评论
+                        if ($order->cid == 28) {
+						    $extra['flm'] = '普通';
+                            if (!empty($order->kszp_url)) {
+                                $extra['kszp_url'] = $order->kszp_url;
+                            }
+                        } else {
+                            if (!empty($order->kszp_url)) {
+                                $extra['ksid'] = $order->kszp_url;
+                            }
+                        }
 	
 						$ret = $c->handle($order->qq, $order->amount, $extra);
 						if ($ret->error) {
