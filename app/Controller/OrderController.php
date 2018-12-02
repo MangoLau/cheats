@@ -78,13 +78,14 @@ class OrderController extends BaseController
 		$ksid = $_POST['ksid'] ?: '';			// 快手用户ID
 		$zpid = $_POST['zpid'] ?: '';			// 快手作品ID
 		$qmkg_gqid = $_POST['qmkg_gqid'] ?: ''; // K歌歌曲ID
+        $flm = $_POST['flm'] ?: '';             // 快手评论分类名
 
 		$douyin_uid = $_POST['douyin_uid'] ? : '';		// 抖音用户ID
 		$douyin_zpid = $_POST['douyin_zpid'] ? : '';	// 抖音作品ID, 客户端传过来的是链接，需要处理
 
 		$ks_url = $_POST['ks_url'];				// 快手链接
 		$qmkg_url = $_POST['qmkg_url'];			// 全民K歌链接
-        $kszp_url = $douyin_url = '';                       //抖音链接
+        $kszp_url = $douyin_url = '';
 
 		// 快手链接
 		if (!empty($ks_url)) {
@@ -256,6 +257,7 @@ class OrderController extends BaseController
                     $order->rzid = $rzid;
                     $order->ksid = $ksid;
                     $order->zpid = $zpid;
+                    $order->flm = $flm;
                     $order->kszp_url = $kszp_url;
                     $order->qmkg_gqid = $qmkg_gqid;
                     $order->douyin_uid = $douyin_uid;

@@ -361,6 +361,15 @@
     * `ssnr`  *string* 说说内容 (非必需)
     * `rzid`  *string* 日志id (对日志的操作需传入日志ID)
     * `rznr`  *string* 日志内容 (非必需)
+    * `plnr`  *string* 说说评论内容 (非必需)
+    * `ksid`  *string* 快手用户ID (非必需)
+    * `ks_url`  *string* 快手链接 (非必需)
+    * `qmkg_url`  *string* 全民K歌链接 (非必需)
+    * `zpid`  *string* 快手作品ID (非必需)
+    * `qmkg_gqid`  *string* K歌歌曲ID (非必需)
+    * `douyin_uid`  *string* 抖音用户ID (非必需)
+    * `douyin_zpid`  *string* 抖音作品ID, 客户端传过来的是链接，需要后端处理 (非必需)
+    * `flm`  *string* 快手评论分类名 (非必需)
 * 返回值:
 
 ```json
