@@ -72,7 +72,7 @@ class Cheat
 		$referer = $origin = $url_info['scheme'] . '://' . $host;
 
 		$curl = new Curl;
-		$curl->setTimeout(10);
+		$curl->setTimeout(20);
 		$curl->setOpt(CURLOPT_COOKIEJAR, $cookie);
 		$curl->setOpt(CURLOPT_RETURNTRANSFER, true);
 		$curl->setHeader('Content-Type', $this->content_type);

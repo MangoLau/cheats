@@ -158,7 +158,8 @@ class OrderController extends BaseController
                 $douyin_url = $douyin_zpid;
             }
             $douyin_url = getEffectiveUrl($douyin_url);
-            $douyin_zpid = (explode('/', $douyin_url))[5];
+            $tmp_arr = explode('/', $douyin_url);
+            $douyin_zpid = $tmp_arr[5];
             $douyin_url = '';
             if (empty($douyin_zpid)) {
                 $this->return_error(406, '抖音链接不合法');
@@ -259,7 +260,7 @@ class OrderController extends BaseController
                     $order->zpid = $zpid;
                     $order->flm = $flm;
                     $order->kszp_url = $kszp_url;
-                    $order->qmkg_gqid = $qmkg_gqid;
+                    $order->qmkg_gqid = $qmkg_gqid ? $qmkg_gqid : '';
                     $order->douyin_uid = $douyin_uid;
                     $order->douyin_zpid = $douyin_zpid;
                     $order->douyin_url = $douyin_url;
