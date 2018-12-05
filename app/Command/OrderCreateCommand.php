@@ -90,7 +90,7 @@ class OrderCreateCommand extends BaseCommand
                         if ($order->cid == 28) {
 						    $extra['flm'] = $order->flm ? $order->flm : '普通';
                             if (!empty($order->kszp_url)) {
-                                $extra['kszp_url'] = $order->kszp_url;
+                                $extra['kszp_dwz'] = $order->kszp_url;
                             }
                         } else {
                             if (!empty($order->kszp_url)) {
