@@ -85,7 +85,10 @@ class ProductController extends BaseController
 
 		if (foreachAble($products)) {
 			foreach ($products as $k => $product) {
-				if (version_compare($this->version, self::SHOW_OFFLINE_PRODUCT_VERSION) < 0 && $product->status == self::STATUS_OFFLINE) {
+//				if (version_compare($this->version, self::SHOW_OFFLINE_PRODUCT_VERSION) < 0 && $product->status == self::STATUS_OFFLINE) {
+//					continue;
+//				}
+				if ($product->status == self::STATUS_OFFLINE) {
 					continue;
 				}
 
@@ -158,7 +161,10 @@ class ProductController extends BaseController
 
 		if (foreachAble($products)) {
 			foreach ($products as $k => $product) {
-				if (version_compare($this->version, self::SHOW_OFFLINE_PRODUCT_VERSION) < 0 && $product->status == self::STATUS_OFFLINE) {
+//				if (version_compare($this->version, self::SHOW_OFFLINE_PRODUCT_VERSION) < 0 && $product->status == self::STATUS_OFFLINE) {
+//					continue;
+//				}
+				if ($product->status == self::STATUS_OFFLINE) {
 					continue;
 				}
 
