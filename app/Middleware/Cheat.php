@@ -14,6 +14,9 @@ class Cheat
 	public $user_agent;				// ua
 	public $content_type;			// content-type
 
+    private $username = '13570208297';
+    private $username_password = 'kudian888';
+
 	public function __construct($card = '')
 	{
 		$this->card = $card;
@@ -138,6 +141,58 @@ class Cheat
 
 		return $curl;
 	}
+
+    /**
+     * 下单
+     * @param string $qq
+     * @param int $amount
+     * @param array $extra
+     * @return Curl
+     * @throws \ErrorException
+     */
+	public function order($qq = '', $amount = 100, $extra = [])
+    {
+        $cookie = '../tmp/' . __FUNCTION__ . '-' . intval(microtime(true)*10000) . '-cookie.txt';
+        parse_str(parse_url($this->url)['query'], $query);
+
+        $url = $this->login_url;
+        $url_info = parse_url($url);
+        parse_str($url_info['query'], $query);
+        $host = $url_info['host'];
+        $referer = $origin = $url_info['scheme'] . '://' . $host;
+
+        $curl = new Curl;
+        $curl->setTimeout(20);
+        $curl->setOpt(CURLOPT_COOKIEJAR, $cookie);
+        $curl->setOpt(CURLOPT_RETURNTRANSFER, true);
+        $curl->setHeader('Content-Type', $this->content_type);
+        $curl->setHeader('Referer', $referer);
+        $curl->setHeader('Host', $host);
+        $curl->setHeader('Origin', $origin);
+        $curl->setHeader('User-Agent', $this->user_agent);
+        $curl->setHeader('X-Requested-With', 'XMLHttpRequest');
+        $curl->setHeader('Connection', 'keep-alive');
+        $params = [
+            'qq' => $qq,
+            'need_num_0' => $amount,
+            'goods_id' => $query['id'],
+            'goods_type' => $query['goods_type'],
+            'Api_UserName' => $this->username,
+            'Api_UserMd5Pass' => strtolower(md5($this->username_password)),
+            'pay_type' => 1,
+        ];
+
+        if (!empty($extra)) {
+            $params += $extra;
+        }
+
+        $curl->post($this->url, $params);
+
+        $curl->close();
+
+        @unlink($cookie);
+        return $curl;
+    }
 
 	// 卡密详情 (不需登录)
 	public function cardDetail()

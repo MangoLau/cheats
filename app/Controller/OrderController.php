@@ -212,13 +212,14 @@ class OrderController extends BaseController
             return;
         }
 
+        // 不使用卡密方式，直接使用账号密码方式提交到平台--2019-07-29
         // 获取该用何种类型的卡密
-        $card = Card::findOne('cards', ' remaining >= ? AND type = ? AND status = ? ', [ $product->amount, $product->cid, self::CARD_STATUS_ONLINE ]);
+        /*$card = Card::findOne('cards', ' remaining >= ? AND type = ? AND status = ? ', [ $product->amount, $product->cid, self::CARD_STATUS_ONLINE ]);
         if (empty($card)) {
             $this->error('order create failed - no card', [ $cpid, $channel, $this->token->uid ]);
             $this->return_error(500, '该业务暂时不可用，请稍后再试');
             return;
-        }
+        }*/
 
         $cheat = Cheat::findOne('cheats', ' id = ? AND status = ? ', [ $product->cid, self::CHEAT_STATUS_ONLINE ]);
         if (empty($cheat)) {
@@ -234,9 +235,10 @@ class OrderController extends BaseController
                     // 是否是拉圈圈业务
                     $is_laquanquan = $cheat->remark == 'laquanquan';
 
+                    // 不使用卡密方式，直接使用账号密码方式提交到平台--2019-07-29
                     // 更新卡密剩余额度
-                    $card->remaining =  $card->total-$product->amount;
-                    Card::store($card);
+                    /*$card->remaining =  $card->total-$product->amount;
+                    Card::store($card);*/
 
                     // 更新用户积分
                     $user->remaining_scores -= $product->scores;
@@ -247,7 +249,7 @@ class OrderController extends BaseController
 
                     // 生成订单
                     $order = Order::dispense('orders');
-                    $order->identify = $card->identify;
+                    $order->identify = '';//$card->identify;
                     $order->uid = $user->id;
                     $order->qq = $user->qq;
                     $order->cid = $product->cid;
@@ -324,7 +326,7 @@ class OrderController extends BaseController
 				$c->setProgressUrl($cheat->progress_url);
 				$ret = $c->orderProgress($page, $order->qq);
 				if ($ret->error) {
-					$this->error('order progress update error - curl error', [ $ret->error, $curl->response, $order ]);
+					$this->error('order progress update error - curl error', [ $ret->error, $ret->response, $order ]);
 				} else {
 					$response = is_object($ret->response) ? $ret->response : json_decode($ret->response);
 					$data = $response->exhibitDatas;
@@ -360,7 +362,7 @@ class OrderController extends BaseController
 	/**
 	 * 直接下单
 	 */
-	public function createDirectly()
+	public function createDirectlyBak()
 	{
 		$cpid = $_POST['cpid'];
 		$channel = $_POST['channel'] ?: '';
@@ -532,5 +534,172 @@ class OrderController extends BaseController
 			}
 		}
 	}
+
+    /**
+     * 直接下单
+     */
+    public function createDirectly()
+    {
+        $cpid = $_POST['cpid'];
+        $channel = $_POST['channel'] ?: '';
+        // $qq = $_POST['qq'];
+
+        $ssid = $_POST['ssid'] ?: '';			// 说说id
+        $ssnr = $_POST['ssnr'] ?: '';			// 说说内容
+
+        $rzid = $_POST['rzid'] ?: '';			// 日志id
+        $rznr = $_POST['rznr'] ?: '';			// 日志内容
+
+        $ksid = $_POST['ksid'] ?: '';			// 快手用户ID
+        $zpid = $_POST['zpid'] ?: '';			// 快手作品ID
+        $qmkg_gqid = $_POST['qmkg_gqid'] ?: ''; // K歌歌曲ID
+        $douyin_uid = $_POST['douyin_uid'] ? : '';		// 抖音用户ID
+        $douyin_zpid = $_POST['douyin_zpid'] ? : '';	// 抖音作品ID, 客户端传过来的是链接，需要处理
+        // 处理抖音链接
+        if (!empty($douyin_zpid)) {
+            if (!filter_var($douyin_zpid, FILTER_VALIDATE_URL)) {
+                $this->return_error(400, '抖音链接不合法');
+                return;
+            }
+
+            $douyin_zpid = explode('/', $douyin_zpid)[5];
+            if (empty($douyin_zpid)) {
+                $this->return_error(401, '抖音链接不合法');
+                return;
+            }
+        }
+
+        if (empty($cpid)) {
+            $this->return_error(400, '商品不存在');
+        } else {
+            $product = CheatProduct::findOne('cheatproducts', ' id = ? AND status = ? ', [ $cpid, self::PRODUCT_STATUS_ONLINE ]);
+
+            if (empty($product)) {
+                $this->return_error(401, '商品不存在');
+            } else {
+                $user = User::findOne('users', ' id = ? ', [ $this->token->uid ]);
+
+                if (empty($user)) {
+                    $this->return_error();
+                } elseif (empty($user->qq)) {
+                    $this->return_error(403, '请先绑定QQ');
+                } else {
+                    // 获取用户积分是否足够
+                    if ($user->remaining_scores < $product->scores) {
+                        $this->return_error(403, '积分不足请先充值');
+                    } else {
+
+                        $cheat = Cheat::findOne('cheats', ' id = ? AND status = ? ', [ $product->cid, self::CHEAT_STATUS_ONLINE ]);
+                        if (empty($cheat)) {
+                            $this->return_error();
+                        } else {
+                            // 判断该业务是否需要vip身份
+                            if ($cheat->need_vip && $user->vip_deadline < getCurrentTime()) {
+                                $this->return_error(405, '该业务只开放给VIP用户');
+                            } else {
+                                // 是否是拉圈圈业务
+                                $is_laquanquan = $cheat->remark == 'laquanquan';
+
+                                $c = new C();
+                                $c->setLoginUrl($cheat->login_url);
+                                $c->setUrl($cheat->url);
+
+                                // 其他参数
+                                $extra = [];
+                                if (!empty($ssid)) {
+                                    $extra['ssid'] = $ssid;
+                                }
+                                if (!empty($rzid)) {
+                                    $extra['rzid'] = $rzid;
+                                }
+                                if (!empty($ksid)) {
+                                    $extra['ksid'] = $ksid;
+                                }
+                                if (!empty($zpid)) {
+                                    $extra['zpid'] = $zpid;
+                                }
+                                if (!empty($qmkg_gqid)) {
+                                    $extra['qmkg_gqid'] = $qmkg_gqid;
+                                }
+                                if (!empty($douyin_uid)) {
+                                    $extra['zh'] = $douyin_uid;
+                                }
+                                if (!empty($douyin_zpid)) {
+                                    $extra['zh'] = $douyin_zpid;
+                                }
+
+                                $ret = $c->handle($user->qq, $product->amount, $extra);
+                                if ($ret->error) {
+                                    $this->error('order curl error', (array)$ret);
+                                    $this->return_error(222, [ $ret->error, $ret->errorMessage, $ret->curlErrorMessage, $cheat->login_url, $cheat->url, $ret ]);
+                                } else {
+                                    $response = $ret->response;
+
+                                    if ($response->status == 0) {
+                                        $this->error('order curl response status 0', [$response, $_POST]);
+                                        $this->return_error(501, $response->info);
+                                    } else {
+                                        // 事务处理
+                                        Order::begin();
+                                        try {
+
+                                            // 更新用户积分
+                                            $user->remaining_scores -= $product->scores;
+                                            User::store($user);
+
+                                            // 积分变动记录
+                                            ScoreLog::orderSpending($user->id, $product->scores, $cheat->title);
+
+                                            // 生成订单
+                                            $order = Order::dispense('orders');
+                                            $order->order_id = $response->order_id;
+                                            $order->identify = '';
+                                            $order->uid = $user->id;
+                                            $order->qq = $user->qq;
+                                            $order->cid = $product->cid;
+                                            $order->amount = $product->amount;
+                                            $order->real_amount = 0;
+                                            $order->scores = $product->scores;
+                                            $order->ssid = $ssid;
+                                            $order->rzid = $rzid;
+                                            $order->ksid = $ksid;
+                                            $order->zpid = $zpid;
+                                            $order->qmkg_gqid = $qmkg_gqid;
+                                            $order->channel = $channel;
+                                            $order->platform = strtolower($this->platform) == 'android' ? self::PLATFORM_ANDROID : self::PLATFORM_IOS;
+                                            $order->status = $is_laquanquan ? self::ORDER_STATUS_COMPLETE : self::ORDER_STATUS_DEALING;	//
+                                            $order->created_day = date('Ymd', getCurrentTime());
+                                            Order::store($order);
+
+                                            Order::commit();
+
+                                            $ret = [];
+                                            if (foreachAble($order)) {
+                                                $ret['id'] = $order->id;
+                                                $ret['qq'] = $order->qq;
+                                                $ret['type'] = $cheat->title;
+                                                $ret['amount'] = $product->amount;
+                                                $ret['scores'] = $order->scores;
+                                                $ret['status'] = strval($order->status);
+                                                $ret['created_at'] = strval(getCurrentTime());
+                                            }
+
+                                            $this->return_success($ret);
+                                        } catch (Exception $e) {
+                                            $this->error('order create rollbak', [$e->getMessages()]);
+                                            Order::rollback();
+
+                                            $this->return_error();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 }
 
