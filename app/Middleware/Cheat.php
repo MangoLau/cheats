@@ -108,6 +108,54 @@ class Cheat
 		return $curl;
 	}
 
+    /**
+     * 账号登录
+     * @param string $cookie
+     * @return Curl
+     * @throws \ErrorException
+     */
+	private function accountLogin($cookie = '')
+    {
+        $url = $this->login_url;
+        $url_info = parse_url($url);
+        parse_str($url_info['query'], $query);
+        $host = $url_info['host'];
+        $referer = $origin = $url_info['scheme'] . '://' . $host;
+
+        $curl = new Curl;
+        $curl->setTimeout(20);
+        $curl->setOpt(CURLOPT_COOKIEJAR, $cookie);
+        $curl->setOpt(CURLOPT_RETURNTRANSFER, true);
+        $curl->setHeader('Content-Type', $this->content_type);
+        $curl->setHeader('Referer', $referer);
+        $curl->setHeader('Host', $host);
+        $curl->setHeader('Origin', $origin);
+        $curl->setHeader('User-Agent', $this->user_agent);
+        $curl->setHeader('X-Requested-With', 'XMLHttpRequest');
+        $curl->setHeader('Connection', 'keep-alive');
+
+        // 服务器IP被封，此处需要用代理
+        // $curl->setOpt(CURLOPT_PROXY, '113.65.161.205:9797');
+        // $curl->setOpt(CURLOPT_PROXY, '110.73.55.77:8123');
+
+        $curl->post($url, array(
+            'cardno' => '',
+            'password' => '',
+            'username' => $this->username,
+            'username_password' => $this->username_password,
+            'sendpass_username' => '',
+            'reg_username' => '',
+            'reg_password' => '',
+            'reg_sex' => 0,
+            'reg_qq' => '',
+            'id' => $query['id'],
+            'goods_type' => $query['goods_type'],
+        ));
+
+        // dd([$curl->error, $curl->errorMessage, $curl->curlErrorMessage, $curl->response, $curl->getInfo(), $query]);
+        return $curl;
+    }
+
 	// 各种点赞/转发处理
 	public function handle($qq = '', $amount = 100, $extra = [])
 	{
@@ -323,11 +371,11 @@ class Cheat
 		// $url = 'http://xiaochao.95jw.cn/index.php?m=home&c=jiuwuxiaohun&a=qq_shuoshuo_lists';
 		// $url = 'http://www.1gege.cn/index.php?m=home&c=jiuwuxiaohun&a=qq_shuoshuo_lists';
 		// $url = 'http://1gege.ssgnb.95jw.cn/index.php?m=home&c=jiuwuxiaohun&a=qq_shuoshuo_lists';
-		$url = 'http://1gege.ssgnb.95jw.cn/index.php?m=home&c=jiuwuxiaohun&a=qq_shuoshuo_lists&goods_type=143&no_robot=do_not_use_the_program_to_call_this_interface';
-		$this->setLoginUrl('http://1gege.ssgnb.95jw.cn/index.php?m=Home&c=Card&a=login&id=1908&goods_type=143');
+		$url = 'http://www.1gege.cn/index.php?m=home&c=jiuwuxiaohun&a=qq_shuoshuo_lists&goods_type=601';
+		$this->setLoginUrl('http://www.1gege.cn/index.php?m=Home&c=User&a=login&id=29943&goods_type=601');
 
 		$cookie = '../tmp/' . __FUNCTION__ . '-' . intval(microtime(true)*10000) . '-cookie.txt';
-		$curl = $this->login($cookie);
+		$curl = $this->accountLogin($cookie);
 
 		// $curl->setOpt(CURLOPT_RETURNTRANSFER, true);
 		// $curl->setHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');

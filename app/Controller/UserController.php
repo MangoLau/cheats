@@ -374,7 +374,7 @@ class UserController extends BaseController
 		} else {
 			$ret = [];
 			$page = $_GET['page'] ?: 1;
-			$data = Qzone::getQQTwittees($user->qq, $page);
+			/*$data = Qzone::getQQTwittees($user->qq, $page);
 			if ($data['code'] > 0) {
 				$this->return_error(self::QZONE_STATUS_PRIVATE_ERROR_CODE, '请先开启绑定QQ对所有人可见的权限(点击右上角图标，查看打开权限步骤)');
 			} elseif (empty($data['result'])) {
@@ -387,37 +387,35 @@ class UserController extends BaseController
 				}
 
 				$this->return_success($ret);
-			}
+			}*/
 
-			// 获取卡密
-// 			$card = Card::findOne('cards', 'status = 1 ORDER BY ID DESC');
-// 			$cheat = new Cheat('2018WEK3CG8FWN7G4N6GY9YXHBTYSQ');
-// 			$data = $cheat->xdzkQQTwittess($user->qq, $page);
-// 			if (!empty($data->error)) {
-// 				$this->return_error();
-// 			} else {
-// 				$data = json_decode($data->response);
+ 			$cheat = new Cheat();
+ 			$data = $cheat->xdzkQQTwittess($user->qq, $page);
+ 			if (!empty($data->error)) {
+ 				$this->return_error();
+ 			} else {
+ 				$data = json_decode($data->response);
 
-//                 if ($data->right == $qzone_right_private_status || $data->code == $qzone_right_private_code) {
-//                     $this->return_error(self::QZONE_STATUS_PRIVATE_ERROR_CODE, '请先开启
-// 绑定QQ对所有人可见的权限(点击右上角图标，查看打开权限步骤)');
-//                 } else {
-//                     $data = $data->msglist;
-//                     if (empty($data)) {
-//                             $this->return_error(404, '你还未发表过说说');
-//                     } else {
-//                         if (foreachAble($data)) {
-//                             foreach ($data as $k => $v) {
-//                                 $ret[$k]['ssid'] = (string)$v->tid;
-//                                 $ret[$k]['content'] = $v->content ?: $v->rt_title;
-//                                 $ret[$k]['created_time'] = (string)$v->created_time;
-//                             }
-//                         }
+                 if ($data->right == $qzone_right_private_status || $data->code == $qzone_right_private_code) {
+                     $this->return_error(self::QZONE_STATUS_PRIVATE_ERROR_CODE, '请先开启
+ 绑定QQ对所有人可见的权限(点击右上角图标，查看打开权限步骤)');
+                 } else {
+                     $data = $data->msglist;
+                     if (empty($data)) {
+                             $this->return_error(404, '你还未发表过说说');
+                     } else {
+                         if (foreachAble($data)) {
+                             foreach ($data as $k => $v) {
+                                 $ret[$k]['ssid'] = (string)$v->tid;
+                                 $ret[$k]['content'] = $v->content ?: $v->rt_title;
+                                 $ret[$k]['created_time'] = (string)$v->created_time;
+                             }
+                         }
 
-//                        	$this->return_success($ret);
-//                 	}
-//                 }
-// 			}
+                         $this->return_success($ret);
+                 	}
+                 }
+ 			}
 		}
 	}
 
