@@ -413,4 +413,43 @@ class Cheat
 
 		return $curl;
 	}
+
+    /**
+     * 获取qq说说
+     * @param string $qq
+     * @param int $page
+     * @return mixed
+     * @throws \ErrorException
+     */
+	public static function getQQTwittes($qq = '', $page = 1)
+    {
+        $count = 20;
+        $baseUrl = 'https://mobile.qzone.qq.com/list';
+        $params = [
+            'format' => 'json',
+            'list_type' => 'shuoshuo',
+            'action' => '0',
+            'res_uin' => $qq,
+            'count' => $count,
+        ];
+
+        $reqUrl = $baseUrl.'?'.http_build_query($params);
+        $curl = new Curl;
+        /* cookie的获取方法 */
+        // 浏览器里按F12进入调试模式 登录空间(https://qzone.qq.com/)
+        // Network下寻找任意XHR请求 查看其Request Headers下的cookie
+        // 仅截取cookie中的p_uin=xxx; pt4_token=xxx; p_skey=xxx (注意：仅需要p_uin pt4_token p_skey三个参数，不能多，也不能少)
+        $curl->setHeader('accept', 'application/json');
+        $curl->setHeader('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36');
+        $curl->setHeader('cookie', 'p_uin=o2529397815; pt4_token=ToWlJMSoA31qEP*WIgA*jYtJowuzRe4xWOse0-FoPe4_; p_skey=GxfABkX3LFhl*ZITPvFtjzTXehnQFiJJA8h764VbbJA_;');
+        $cookie = realpath('../tmp') . '/' . __FUNCTION__ . '-' . intval(microtime(true)*10000) . '-cookie.txt';
+        $curl->setOpt(CURLOPT_COOKIEJAR, $cookie);
+        $curl->get($reqUrl);
+        $ret =  $curl->exec();
+        $curl->close();
+        if (file_exists($cookie)) {
+            unlink($cookie);
+        }
+        return $ret;
+    }
 }

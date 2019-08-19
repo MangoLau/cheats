@@ -52,7 +52,7 @@ Macaw::get('/banners', 'App\Controller\BannerController@index');						// banners
 Macaw::get('/hot-people', 'App\Controller\HotPeopleController@index');					// 空间红人
 Macaw::get('/shareRanks', 'App\Controller\HotPeopleController@shareRanks');				// 分享排行榜
 
-Macaw::get('/shuoshuo', 'App\Controller\UserController@qqTwittees');					// 获取发表的说说
+Macaw::get('/shuoshuo', 'App\Controller\UserController@qqTwittees2');					// 获取发表的说说
 Macaw::get('/qqBlogs', 'App\Controller\UserController@qqBlogs');						// 获取发表的日志
 Macaw::get('/broadcasts', 'App\Controller\UserController@cheatBroadcasts');				// 订单广播，假数据
 
@@ -70,6 +70,6 @@ Macaw::get('/feedbacks', 'App\Controller\FeedbackController@index');					// 反�
 Macaw::post('/complaint', 'App\Controller\ComplaintController@create');					// 创建反馈
 Macaw::get('/complaints', 'App\Controller\ComplaintController@index');					// 反馈列表
 
-Macaw::get('/test', 'App\Controller\RechargeController@youPayNotify');
+Macaw::get('/test', 'App\Controller\UserController@qqTwittees2');
 
 Macaw::dispatch();

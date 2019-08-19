@@ -419,6 +419,57 @@ class UserController extends BaseController
 		}
 	}
 
+    /**
+     * 获取用户说说
+     */
+	public function qqTwittees2()
+    {
+        $user = User::findOne('users', ' id = ? ', [ $this->token->uid ]);
+        if (empty($user->qq)) {
+            $this->return_error(401, '请先绑定QQ');
+        } else {
+            $ret = [];
+            $page = $_GET['page'] ?: 1;
+            $cheat = new Cheat();
+            $retJson = $cheat::getQQTwittes($user->qq, $page);
+//            $retJson = $cheat::getQQTwittes(853779003, $page);
+            if (empty($retJson)) {
+                $this->return_error();
+            }
+            $retArray = json_decode($retJson,true);
+            if($retArray['code'] == -4009) {
+                $this->return_error(self::QZONE_STATUS_PRIVATE_ERROR_CODE, '请先开启绑定QQ对所有人可见的权限(点击右上角图标，查看打开权限步骤)');
+                return false;
+            }
+            if(empty($retArray['data']['vFeeds'])) {
+                $this->return_error(404, '你还未发表过说说，或者获取说说失败，请联系客服');
+                return false;
+            }
+            foreach ($retArray['data']['vFeeds'] as $say){
+                if(isset($say['original']))//非原创说说
+                    continue;
+                $tmp = [];
+                $tmp['ssid'] = $say['id']['cellid'];
+                $tmp['content'] = $say['summary']['summary'];
+                $tmp['created_time'] = $say['comm']['time'];
+
+                if(empty($tmp['content'])){
+                    if(isset($say['pic'])){
+                        $tmp['content'] = '图片说说'.'['.date('Y年m月d日 H:i:s',intval($say['comm']['time'])).']';
+                    }elseif(isset($say['video'])){
+                        $tmp['content'] = '视频说说'.'['.date('Y年m月d日 H:i:s',intval($say['comm']['time'])).']';
+                    }else{
+                        //可能是已经被删除的说说
+//                        Log::record('没有标题'.json_encode($say));
+                        continue;
+                    }
+                }
+                $ret[] = $tmp;
+            }
+            $this->return_success($ret);
+        }
+    }
+
 	/**
 	 * 获取发表的日志
 	 * count = 15
