@@ -52,7 +52,7 @@ Macaw::get('/banners', 'App\Controller\BannerController@index');						// banners
 Macaw::get('/hot-people', 'App\Controller\HotPeopleController@index');					// 空间红人
 Macaw::get('/shareRanks', 'App\Controller\HotPeopleController@shareRanks');				// 分享排行榜
 
-Macaw::get('/shuoshuo', 'App\Controller\UserController@qqTwittees2');					// 获取发表的说说
+Macaw::get('/shuoshuo', 'App\Controller\UserController@qqTwittees');					// 获取发表的说说
 Macaw::get('/qqBlogs', 'App\Controller\UserController@qqBlogs');						// 获取发表的日志
 Macaw::get('/broadcasts', 'App\Controller\UserController@cheatBroadcasts');				// 订单广播，假数据
 

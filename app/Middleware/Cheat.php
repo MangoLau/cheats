@@ -388,6 +388,9 @@ class Cheat
 		));
 		$curl->close();
 
+		if (file_exists($cookie)) {
+		    unlink($cookie);
+        }
 		unset($cookie);
 		// dd($curl, $curl->response);
 
